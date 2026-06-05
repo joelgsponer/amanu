@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Two-Memory Architecture — Blueprint for an LLM-Maintained Knowledge Base</title>
+<style>
+  :root{
+    --paper:#f5f4f1;
+    --paper-2:#fbfaf8;
+    --ink:#1a1c1f;
+    --ink-soft:#4d5158;
+    --ink-faint:#868b93;
+    --rule:#e3e1da;
+    --rule-strong:#cecbc1;
+    --indigo:#3b4cca;       /* neutral primary accent */
+    --indigo-soft:#e0e3f7;
+    --slate:#3f5161;
+    --slate-soft:#dde6ec;
+    --teal:#1f7a72;
+    --teal-soft:#d6ece9;
+    --green:#3c6b4f;
+    --green-soft:#dde9df;
+    --amber:#9a6b1f;
+    --amber-soft:#f1e4cc;
+    --mono:"SF Mono",ui-monospace,"Cascadia Mono","Roboto Mono",Menlo,Consolas,monospace;
+    --serif:"Iowan Old Style","Palatino Linotype","Book Antiqua",Georgia,"Times New Roman",serif;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --shadow:0 1px 2px rgba(26,28,31,.05),0 8px 28px -12px rgba(26,28,31,.18);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.62;font-size:16.5px;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 28px}
+
+  header.top{border-bottom:1px solid var(--rule-strong);background:radial-gradient(1200px 320px at 80% -40%, rgba(59,76,202,.08), transparent 60%),var(--paper-2)}
+  .masthead{padding:54px 0 42px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--indigo);font-weight:600;margin:0 0 18px;display:flex;align-items:center;gap:10px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--indigo);display:inline-block}
+  h1.title{font-family:var(--serif);font-weight:600;font-size:clamp(34px,5.2vw,58px);line-height:1.04;margin:0 0 18px;letter-spacing:-.012em;max-width:19ch}
+  .standfirst{font-size:19px;color:var(--ink-soft);max-width:64ch;margin:0 0 22px;font-family:var(--serif);font-style:italic}
+  .cta{display:flex;flex-wrap:wrap;align-items:center;gap:14px;margin:0 0 26px}
+  .cta a.btn{display:inline-flex;align-items:center;gap:9px;background:var(--indigo);color:#fff;text-decoration:none;font-weight:650;font-size:15px;padding:11px 20px;border-radius:10px;box-shadow:var(--shadow);transition:transform .08s ease}
+  .cta a.btn:hover{transform:translateY(-1px)}
+  .cta a.btn .arw{font-family:var(--mono);font-size:13px}
+  .cta a.btn code{background:rgba(255,255,255,.16);border:none;color:#fff;font-size:12.5px;padding:1px 6px}
+  .cta .hint{font-size:13.5px;color:var(--ink-soft);max-width:42ch}
+  .meta-row{display:flex;flex-wrap:wrap;gap:10px 26px;font-family:var(--mono);font-size:12.5px;color:var(--ink-faint);padding-top:18px;border-top:1px solid var(--rule)}
+  .meta-row b{color:var(--ink-soft);font-weight:600}
+
+  .grid{display:grid;grid-template-columns:236px 1fr;gap:48px;align-items:start;padding:46px 0 90px}
+  nav.toc{position:sticky;top:24px;font-size:13.5px}
+  nav.toc .lbl{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 14px}
+  nav.toc ol{list-style:none;margin:0;padding:0;counter-reset:s}
+  nav.toc li{counter-increment:s;margin:0 0 3px}
+  nav.toc a{display:flex;gap:10px;text-decoration:none;color:var(--ink-soft);padding:6px 10px;border-radius:7px;border-left:2px solid transparent;line-height:1.35}
+  nav.toc a::before{content:counter(s,decimal-leading-zero);font-family:var(--mono);font-size:11px;color:var(--ink-faint);padding-top:1px}
+  nav.toc a:hover{background:#fff;color:var(--ink);border-left-color:var(--indigo)}
+
+  main{min-width:0}
+  section{margin:0 0 60px;scroll-margin-top:24px}
+  h2{font-family:var(--serif);font-size:29px;font-weight:600;letter-spacing:-.01em;margin:0 0 8px;padding-top:8px}
+  h2 .num{font-family:var(--mono);font-size:14px;color:var(--indigo);font-weight:600;vertical-align:super;margin-right:10px}
+  .sec-sub{color:var(--ink-soft);max-width:66ch;margin:0 0 26px;font-size:16.5px}
+  h3{font-size:18px;font-weight:650;margin:34px 0 10px;letter-spacing:-.005em}
+  p{margin:0 0 16px;max-width:70ch}
+  a.inl{color:var(--indigo);text-decoration:none;border-bottom:1px solid var(--indigo-soft)}
+  a.inl:hover{border-bottom-color:var(--indigo)}
+  code{font-family:var(--mono);font-size:.86em;background:#fff;border:1px solid var(--rule);border-radius:5px;padding:1px 6px;color:var(--slate)}
+  strong{font-weight:650}
+  .lead{font-size:18px;color:var(--ink-soft);font-family:var(--serif)}
+
+  .systems{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:8px 0 6px}
+  .syscard{background:var(--paper-2);border:1px solid var(--rule-strong);border-radius:14px;padding:24px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+  .syscard::before{content:"";position:absolute;inset:0 auto 0 0;width:4px}
+  .syscard.a::before{background:var(--slate)}
+  .syscard.b::before{background:var(--indigo)}
+  .syscard .tag{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:600}
+  .syscard.a .tag{color:var(--slate)} .syscard.b .tag{color:var(--indigo)}
+  .syscard h4{font-family:var(--serif);font-size:21px;margin:8px 0 6px;font-weight:600}
+  .syscard p{font-size:14.5px;color:var(--ink-soft);margin:0 0 12px}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 0}
+  .chip{font-family:var(--mono);font-size:11px;padding:3px 8px;border-radius:20px;background:#fff;border:1px solid var(--rule);color:var(--ink-soft)}
+
+  .note{border-left:3px solid var(--amber);background:var(--amber-soft);padding:14px 18px;border-radius:0 10px 10px 0;margin:22px 0;font-size:14.5px;color:#5e451a}
+  .note b{color:#4a3713}
+  .note.privacy{border-color:var(--indigo);background:var(--indigo-soft);color:#26306e}
+  .note.privacy b{color:#1b2456}
+
+  .tree{font-family:var(--mono);font-size:13px;line-height:1.85;background:#1f2226;color:#e8e6df;border-radius:12px;padding:22px 24px;overflow-x:auto;box-shadow:var(--shadow);margin:18px 0}
+  .tree .d{color:#b3bdf0}
+  .tree .f{color:#cfe0c8}
+  .tree .c{color:#8a8f98}
+  .tree .root{color:#fff;font-weight:600}
+
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14px}
+  th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--rule);vertical-align:top}
+  thead th{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);border-bottom:1px solid var(--rule-strong)}
+  td code{background:var(--paper);border-color:var(--rule)}
+  tbody tr:hover{background:var(--paper-2)}
+
+  .types{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin:20px 0}
+  .type{border:1px solid var(--rule-strong);border-radius:11px;padding:16px 18px;background:var(--paper-2)}
+  .type .h{display:flex;align-items:center;gap:9px;margin-bottom:6px}
+  .type .dot{width:10px;height:10px;border-radius:50%}
+  .type .name{font-family:var(--mono);font-size:13px;font-weight:600}
+  .type p{font-size:13.5px;color:var(--ink-soft);margin:0}
+  .type .ex{font-family:var(--mono);font-size:11.5px;color:var(--ink-faint);margin-top:8px;display:block}
+  .t-user .dot{background:var(--slate)} .t-user .name{color:var(--slate)}
+  .t-feedback .dot{background:var(--indigo)} .t-feedback .name{color:var(--indigo)}
+  .t-project .dot{background:var(--green)} .t-project .name{color:var(--green)}
+  .t-reference .dot{background:var(--amber)} .t-reference .name{color:var(--amber)}
+
+  pre{font-family:var(--mono);font-size:12.8px;line-height:1.7;background:#1f2226;color:#e8e6df;border-radius:12px;padding:20px 22px;overflow-x:auto;margin:18px 0;box-shadow:var(--shadow)}
+  pre .k{color:#b3bdf0} pre .v{color:#cfe0c8} pre .c{color:#8a8f98} pre .l{color:#8fd0c9}
+
+  .figure{margin:24px 0;background:var(--paper-2);border:1px solid var(--rule-strong);border-radius:14px;padding:26px 24px 18px;box-shadow:var(--shadow)}
+  .figure svg{width:100%;height:auto;display:block}
+  .figcap{font-size:13px;color:var(--ink-faint);font-family:var(--mono);margin-top:14px;text-align:center}
+
+  .flow{counter-reset:step;margin:22px 0;display:grid;gap:0}
+  .step{display:grid;grid-template-columns:46px 1fr;gap:18px;padding:18px 0;border-bottom:1px dashed var(--rule)}
+  .step:last-child{border-bottom:none}
+  .step .n{counter-increment:step;font-family:var(--mono);font-weight:600;color:#fff;background:var(--slate);width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px}
+  .step .n::before{content:counter(step)}
+  .step.kb .n{background:var(--indigo)}
+  .step.build .n{background:var(--teal)}
+  .step .b h4{margin:2px 0 4px;font-size:16px;font-weight:650}
+  .step .b p{margin:0;font-size:14.5px;color:var(--ink-soft)}
+  .step .b code{font-size:12px}
+
+  .vs{display:grid;grid-template-columns:1fr auto 1fr;gap:0;align-items:stretch;margin:20px 0;border:1px solid var(--rule-strong);border-radius:14px;overflow:hidden;background:var(--paper-2)}
+  .vs .col{padding:22px 24px}
+  .vs .col h4{font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;margin:0 0 14px}
+  .vs .h-left h4{color:var(--slate)} .vs .h-mid h4{color:var(--indigo)} .vs .h-right h4{color:var(--teal)}
+  .vs ul{margin:0;padding:0;list-style:none}
+  .vs li{font-size:14px;padding:8px 0 8px 22px;position:relative;color:var(--ink-soft);border-bottom:1px solid var(--rule)}
+  .vs li:last-child{border-bottom:none}
+  .vs li::before{content:"";position:absolute;left:2px;top:15px;width:7px;height:7px;border-radius:2px}
+  .vs .h-left li::before{background:var(--slate)} .vs .h-mid li::before{background:var(--indigo)} .vs .h-right li::before{background:var(--teal)}
+  .vs .div{width:1px;background:var(--rule-strong)}
+
+  ul.clean{padding-left:0;list-style:none;margin:16px 0}
+  ul.clean li{position:relative;padding:7px 0 7px 26px;border-bottom:1px solid var(--rule);max-width:72ch}
+  ul.clean li:last-child{border-bottom:none}
+  ul.clean li::before{content:"\2192";position:absolute;left:4px;color:var(--indigo);font-family:var(--mono)}
+
+  .ext{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:22px 0}
+  .extcard{border:1px solid var(--rule-strong);border-radius:14px;background:var(--paper-2);padding:22px 22px 18px;box-shadow:var(--shadow)}
+  .extcard .ic{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:12px;font-family:var(--mono);font-weight:700;font-size:18px;color:#fff}
+  .extcard.mail .ic{background:var(--teal)} .extcard.research .ic{background:var(--indigo)}
+  .extcard h4{margin:0 0 6px;font-size:17px;font-weight:650}
+  .extcard p{font-size:14px;color:var(--ink-soft);margin:0 0 10px}
+  .extcard ol{margin:0;padding-left:18px;font-size:13.5px;color:var(--ink-soft)}
+  .extcard ol li{margin:5px 0}
+  .extcard .tag{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;color:var(--ink-faint)}
+
+  .extcard.obsidian .ic{background:#7c3aed}
+  .extcard.gog .ic{background:#1f7a72}
+
+  /* status / kind badges in the skills table */
+  .pill{font-family:var(--mono);font-size:10.5px;letter-spacing:.04em;font-weight:600;padding:2px 8px;border-radius:20px;white-space:nowrap;display:inline-block}
+  .pill.exists{background:var(--green-soft);color:var(--green)}
+  .pill.build{background:var(--amber-soft);color:var(--amber)}
+  .pill.kind{background:var(--slate-soft);color:var(--slate)}
+  table.skills td{font-size:13.5px}
+  table.skills td:first-child{font-family:var(--mono);font-size:12.5px;color:var(--indigo);font-weight:600;white-space:nowrap}
+
+  /* drop-in instruction block */
+  .dropin{position:relative;margin:20px 0}
+  .dropin .cap{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 8px;display:flex;align-items:center;gap:8px}
+  .dropin .cap::before{content:"";width:8px;height:8px;border-radius:2px;background:var(--teal)}
+  .dropin pre{margin:0;background:#191b1e;border:1px solid #2c2f34}
+  .dropin pre .s{color:#8fd0c9;font-weight:600}
+  .dropin pre .q{color:#e8c98f}
+  .dropin pre .o{color:#b3bdf0}
+
+  /* attribution card */
+  .attrib{display:flex;gap:14px;align-items:flex-start;border:1px solid var(--rule-strong);border-left:3px solid var(--indigo);border-radius:0 12px 12px 0;background:var(--paper-2);padding:16px 18px;margin:22px 0;font-size:13.5px;color:var(--ink-soft)}
+  .attrib .mk{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--indigo);background:var(--indigo-soft);padding:4px 9px;border-radius:6px;white-space:nowrap;margin-top:2px}
+  .attrib code{font-size:12px}
+
+  /* skills-to-build cards, each with a build prompt */
+  .skillgrid{display:grid;gap:14px;margin:18px 0}
+  .skillcard{border:1px solid var(--rule-strong);border-radius:12px;background:var(--paper-2);padding:16px 18px;box-shadow:var(--shadow)}
+  .skillcard .top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:5px}
+  .skillcard .nm{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--indigo)}
+  .skillcard .purpose{font-size:14px;color:var(--ink-soft);margin:0 0 11px;max-width:none}
+  .skillcard .bp{font-family:var(--mono);font-size:12px;line-height:1.62;background:#191b1e;color:#e8e6df;border:1px solid #2c2f34;border-radius:9px;padding:13px 15px;overflow-x:auto;white-space:pre-wrap;margin:0}
+  .skillcard .bp .lbl{display:block;color:#8a8f98;font-size:10px;letter-spacing:.14em;text-transform:uppercase;margin-bottom:7px}
+  .skillcard .bp b{color:#8fd0c9;font-weight:600}
+  .skillcard .bp code{background:#26292e;border:none;color:#e8c98f;font-size:11.5px;padding:1px 5px}
+
+  /* co-build: the per-phase loop strip */
+  .loop{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:20px 0}
+  .loop .b{font-family:var(--mono);font-size:12px;font-weight:600;padding:7px 13px;border-radius:8px;background:var(--paper-2);border:1px solid var(--rule-strong);color:var(--slate)}
+  .loop .b.hl{background:var(--indigo);color:#fff;border-color:var(--indigo)}
+  .loop .ar{font-family:var(--mono);font-size:12px;color:var(--ink-faint)}
+
+  /* co-build: phase map */
+  .phasemap{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:22px 0}
+  .phase{display:grid;grid-template-columns:46px 1fr;gap:13px;align-items:start;border:1px solid var(--rule-strong);border-radius:11px;background:var(--paper-2);padding:13px 15px}
+  .phase .id{font-family:var(--mono);font-weight:700;font-size:13px;color:#fff;background:var(--slate);border-radius:8px;padding:6px 0;text-align:center}
+  .phase.go .id{background:var(--indigo)}
+  .phase.done .id{background:var(--teal)}
+  .phase h4{margin:0 0 2px;font-size:14.5px;font-weight:650}
+  .phase p{margin:0;font-size:12.5px;color:var(--ink-soft);line-height:1.45}
+
+  /* co-build: callout strip */
+  .twolog{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:20px 0}
+  .twolog .l{border:1px solid var(--rule-strong);border-radius:11px;padding:15px 17px;background:var(--paper-2)}
+  .twolog .l .fn{font-family:var(--mono);font-size:12.5px;font-weight:700;color:var(--indigo);margin-bottom:5px}
+  .twolog .l.ops .fn{color:var(--slate)}
+  .twolog .l p{margin:0;font-size:13px;color:var(--ink-soft)}
+
+  footer{border-top:1px solid var(--rule-strong);background:var(--paper-2);padding:30px 0 50px}
+  footer p{font-size:13px;color:var(--ink-faint);font-family:var(--mono);margin:0;max-width:none}
+
+  @media(max-width:880px){
+    .grid{grid-template-columns:1fr;gap:0}
+    nav.toc{display:none}
+    .systems,.types,.ext{grid-template-columns:1fr}
+    .vs{grid-template-columns:1fr}.vs .div{height:1px;width:auto}
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap masthead">
+    <p class="kicker">Architecture Blueprint · self-host · local-first</p>
+    <h1 class="title">The Two-Memory Architecture</h1>
+    <p class="standfirst">A reusable pattern for an AI assistant that maintains a living, cross-referenced knowledge base over your own documents — and remembers how you like to work while doing it.</p>
+    <div class="cta">
+      <a class="btn" href="build-with-agent.md"><span class="arw">▶</span> Build it with an agent</a>
+      <span class="hint">Hand <code>build-with-agent.md</code> to your assistant and it builds this system <em>with</em> you, step by step — see <a class="inl" href="#cobuild">§08</a>.</span>
+    </div>
+    <div class="meta-row">
+      <span><b>Pattern</b> agent memory + document knowledge base</span>
+      <span><b>Runs on</b> any file-capable agentic assistant</span>
+      <span><b>Posture</b> local-first · privacy-preserving</span>
+      <span><b>Audience</b> anyone building their own</span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+<div class="grid">
+
+  <nav class="toc">
+    <p class="lbl">Contents</p>
+    <ol>
+      <li><a href="#idea">The idea</a></li>
+      <li><a href="#model">Two cooperating memories</a></li>
+      <li><a href="#agentmem">Agent memory, in detail</a></li>
+      <li><a href="#compile">How agent memory compiles</a></li>
+      <li><a href="#kb">The knowledge base</a></li>
+      <li><a href="#ingest">The ingest pipeline</a></li>
+      <li><a href="#build">How to build it</a></li>
+      <li><a href="#cobuild">Build it with an agent</a></li>
+      <li><a href="#extend">Extending the system</a></li>
+      <li><a href="#setup">Guided setup interview</a></li>
+      <li><a href="#automate">Automating the compile loop</a></li>
+      <li><a href="#principles">Design principles</a></li>
+    </ol>
+  </nav>
+
+  <main>
+
+    <!-- 1 -->
+    <section id="idea">
+      <h2><span class="num">01</span>The idea</h2>
+      <p class="sec-sub">Point a capable AI agent at a folder of your documents and give it a constitution. It becomes a tireless librarian: reading, summarising, cross-referencing, and keeping a synthesis current as new material arrives.</p>
+      <p class="lead">The trick that makes it durable is using <strong>two</strong> memories, not one. A <strong>knowledge base</strong> remembers <em>what your documents say</em>. A separate <strong>agent memory</strong> remembers <em>how you want the work done</em> — your preferences, your corrections, your standing instructions. Together they turn a one-off summarising tool into a system that compounds in value the longer you use it.</p>
+      <p>The pattern is deliberately low-tech: plain Markdown files, a folder hierarchy, YAML frontmatter, and wiki-style links. No database, no server, no lock-in. Everything is human-readable, version-controllable, and stays on your machine.</p>
+    </section>
+
+    <!-- 2 -->
+    <section id="model">
+      <h2><span class="num">02</span>Two cooperating memories</h2>
+      <p class="sec-sub">Keep them strictly separate. One stores method; the other stores matter.</p>
+
+      <div class="systems">
+        <div class="syscard a">
+          <span class="tag">Memory A · the method</span>
+          <h4>Agent memory</h4>
+          <p>The assistant's own persistent, cross-session memory: durable preferences, lessons learned, and standing instructions. It shapes <em>how</em> every task is performed. Small, append-mostly, auto-recalled when relevant.</p>
+          <div class="chips"><span class="chip">one fact / file</span><span class="chip">an index</span><span class="chip">typed</span><span class="chip">auto-recalled</span></div>
+        </div>
+        <div class="syscard b">
+          <span class="tag">Memory B · the matter</span>
+          <h4>The knowledge base</h4>
+          <p>A wiki-style store over your documents: immutable sources, a synthesised Markdown layer the agent owns, and a schema that governs both. Versioned, queryable, the single source of truth for <em>what you know</em>.</p>
+          <div class="chips"><span class="chip">raw sources</span><span class="chip">synthesis</span><span class="chip">schema</span><span class="chip">[[links]]</span></div>
+        </div>
+      </div>
+
+      <p>The two reinforce each other. A lesson captured in agent memory ("don't guess at ambiguous data — ask first") governs how knowledge-base pages get written. A stable fact may even live in both — recorded as data in the knowledge base, and held as an anchor in agent memory so any conflicting source gets flagged.</p>
+    </section>
+
+    <!-- 3 -->
+    <section id="agentmem">
+      <h2><span class="num">03</span>Agent memory, in detail</h2>
+      <p class="sec-sub">Structurally trivial: a folder where each file holds exactly one fact, plus a single index listing them all.</p>
+
+      <p>The index is loaded into the agent's context at the start of every session. The individual fact files are pulled in only when they're relevant to the task at hand — so the memory can grow large without flooding context.</p>
+
+      <div class="tree">
+<span class="c"># the agent's per-project memory folder</span>
+<span class="d">memory/</span>
+├─ <span class="f">INDEX.md</span>                  <span class="c">› one line per fact — loaded every session</span>
+├─ <span class="f">pref-concise-summaries.md</span> <span class="c">› type: user</span>
+├─ <span class="f">ask-before-inferring.md</span>   <span class="c">› type: feedback</span>
+└─ <span class="f">current-migration.md</span>      <span class="c">› type: project</span>
+      </div>
+
+      <h3>Four kinds of fact</h3>
+      <p>Every memory declares a <code>type</code>. The type decides what belongs in the file and how its body is shaped.</p>
+      <div class="types">
+        <div class="type t-user">
+          <div class="h"><span class="dot"></span><span class="name">user</span></div>
+          <p>Stable facts about who you are — role, context, lasting preferences.</p>
+          <span class="ex">"Prefers concise, skimmable summaries."</span>
+        </div>
+        <div class="type t-feedback">
+          <div class="h"><span class="dot"></span><span class="name">feedback</span></div>
+          <p>How the agent should work — corrections and confirmed approaches. Body carries explicit <code>Why</code> and <code>How to apply</code> lines.</p>
+          <span class="ex">"Don't infer meaning from ambiguous data — ask first."</span>
+        </div>
+        <div class="type t-project">
+          <div class="h"><span class="dot"></span><span class="name">project</span></div>
+          <p>Ongoing work, goals or constraints not derivable from the files. Relative dates made absolute.</p>
+          <span class="ex">"Current focus through Q3: consolidate older records."</span>
+        </div>
+        <div class="type t-reference">
+          <div class="h"><span class="dot"></span><span class="name">reference</span></div>
+          <p>Pointers to external resources — links, dashboards, identifiers worth keeping.</p>
+          <span class="ex">"Status board: &lt;internal-link&gt;."</span>
+        </div>
+      </div>
+      <p>Facts cross-link with <code>[[name]]</code> — the same convention the knowledge base uses — so the memory folder is itself a small graph. A link to a fact that doesn't exist yet is fine: it marks something worth writing later.</p>
+
+      <h3>Anatomy of a fact</h3>
+      <pre><span class="c">---</span>
+<span class="k">name:</span> <span class="v">ask-before-inferring</span>
+<span class="k">description:</span> <span class="v">Don't infer meaning from ambiguous data alone — observe, then ask.</span>
+<span class="k">type:</span> <span class="v">feedback</span>
+<span class="c">---</span>
+When data is ambiguous, describe only what is observable; do not
+assign meaning without confirmation.
+
+<span class="k">Why:</span>      <span class="v">Pattern-matching to a plausible story produces confident-but-wrong
+          conclusions that then propagate across many pages.</span>
+<span class="k">How to apply:</span> <span class="v">State the observation, ask one clarifying question, and
+          wait before updating any downstream page.</span>
+
+Related: <span class="l">[[ingest-workflow]]</span></pre>
+      <p>The <code>description</code> line does real work: it is the field matched against the current task to decide whether the fact is worth recalling. Vague descriptions never surface — specific ones earn their keep.</p>
+    </section>
+
+    <!-- 4 -->
+    <section id="compile">
+      <h2><span class="num">04</span>How agent memory "compiles"</h2>
+      <p class="sec-sub">Compilation here means <em>assembly</em>: how scattered one-fact files become live context at the right moment — and how a session gets distilled back into a fact.</p>
+
+      <p>Two passes, with the index as the hinge between them. The <strong>read pass</strong> assembles memory into a session; the <strong>write pass</strong> condenses the session back into memory.</p>
+
+      <div class="figure">
+        <svg viewBox="0 0 920 290" role="img" aria-label="Agent memory compile pipeline">
+          <defs>
+            <marker id="ah" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#3f5161"/></marker>
+            <marker id="ahr" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#3b4cca"/></marker>
+          </defs>
+          <text x="14" y="24" font-family="monospace" font-size="12" fill="#3f5161" font-weight="700" letter-spacing="1.5">READ PASS · session start → live context</text>
+          <g font-family="sans-serif" font-size="13" fill="#1a1c1f">
+            <rect x="14" y="40" width="150" height="62" rx="10" fill="#fbfaf8" stroke="#cecbc1"/>
+            <text x="89" y="66" text-anchor="middle" font-weight="650">INDEX.md</text>
+            <text x="89" y="84" text-anchor="middle" font-size="11" fill="#4d5158">loaded in full</text>
+            <rect x="246" y="40" width="160" height="62" rx="10" fill="#fbfaf8" stroke="#cecbc1"/>
+            <text x="326" y="62" text-anchor="middle" font-weight="650">relevance match</text>
+            <text x="326" y="80" text-anchor="middle" font-size="11" fill="#4d5158">on description</text>
+            <rect x="488" y="40" width="170" height="62" rx="10" fill="#fbfaf8" stroke="#cecbc1"/>
+            <text x="573" y="62" text-anchor="middle" font-weight="650">fact pulled in</text>
+            <text x="573" y="80" text-anchor="middle" font-size="11" fill="#4d5158">full body in context</text>
+            <rect x="740" y="40" width="166" height="62" rx="10" fill="#dde6ec" stroke="#3f5161"/>
+            <text x="823" y="62" text-anchor="middle" font-weight="650">injected as context</text>
+            <text x="823" y="80" text-anchor="middle" font-size="11" fill="#3f5161">+ "verify, may be stale"</text>
+          </g>
+          <g stroke="#3f5161" stroke-width="1.6" marker-end="url(#ah)" fill="none">
+            <path d="M164,71 L242,71"/><path d="M406,71 L484,71"/><path d="M658,71 L736,71"/>
+          </g>
+          <text x="14" y="168" font-family="monospace" font-size="12" fill="#3b4cca" font-weight="700" letter-spacing="1.5">WRITE PASS · durable lesson → memory</text>
+          <g font-family="sans-serif" font-size="13" fill="#1a1c1f">
+            <rect x="14" y="184" width="170" height="62" rx="10" fill="#fbfaf8" stroke="#cecbc1"/>
+            <text x="99" y="206" text-anchor="middle" font-weight="650">learn something</text>
+            <text x="99" y="224" text-anchor="middle" font-size="11" fill="#4d5158">durable, non-obvious</text>
+            <rect x="266" y="184" width="160" height="62" rx="10" fill="#fbfaf8" stroke="#cecbc1"/>
+            <text x="346" y="206" text-anchor="middle" font-weight="650">dedup check</text>
+            <text x="346" y="224" text-anchor="middle" font-size="11" fill="#4d5158">update vs create</text>
+            <rect x="508" y="184" width="160" height="62" rx="10" fill="#e0e3f7" stroke="#3b4cca"/>
+            <text x="588" y="206" text-anchor="middle" font-weight="650">write the fact</text>
+            <text x="588" y="224" text-anchor="middle" font-size="11" fill="#4d5158">name·desc·type·body</text>
+            <rect x="750" y="184" width="156" height="62" rx="10" fill="#e0e3f7" stroke="#3b4cca"/>
+            <text x="828" y="206" text-anchor="middle" font-weight="650">index pointer</text>
+            <text x="828" y="224" text-anchor="middle" font-size="11" fill="#4d5158">1 line in INDEX.md</text>
+          </g>
+          <g stroke="#3b4cca" stroke-width="1.6" marker-end="url(#ahr)" fill="none">
+            <path d="M184,215 L262,215"/><path d="M426,215 L504,215"/><path d="M668,215 L746,215"/>
+          </g>
+        </svg>
+        <p class="figcap">fig 1 — the index is the hinge: every read starts from it, every write ends by updating it</p>
+      </div>
+
+      <div class="flow">
+        <div class="step"><span class="n"></span><div class="b"><h4>The index loads, always</h4><p>The index enters context at session start — one line per fact, never the bodies. It is the table of contents the rest of the pass reads against.</p></div></div>
+        <div class="step"><span class="n"></span><div class="b"><h4>Relevance is judged on the description</h4><p>As work proceeds, the task is matched against each fact's <code>description</code>. Specific descriptions get recalled; vague ones never do.</p></div></div>
+        <div class="step"><span class="n"></span><div class="b"><h4>Relevant facts are injected — as context, not commands</h4><p>A matched fact is surfaced as background information, carrying a reminder that it is a point-in-time note to verify, not live ground truth.</p></div></div>
+        <div class="step"><span class="n"></span><div class="b"><h4>Writing back is the reverse</h4><p>A durable lesson is condensed to one fact, deduplicated against existing files (update beats duplicate), written with full frontmatter, and registered with a one-line pointer in the index. Facts that prove wrong are deleted.</p></div></div>
+      </div>
+      <div class="note"><b>Treat recalled facts as leads, not law.</b> Memories are point-in-time observations. A fact may name a file or figure that has since changed — so on recall it is verified against current sources before being acted on.</div>
+    </section>
+
+    <!-- 5 -->
+    <section id="kb">
+      <h2><span class="num">05</span>The knowledge base</h2>
+      <p class="sec-sub">A three-layer store that turns a pile of documents into a cross-referenced, queryable synthesis.</p>
+
+      <div class="vs">
+        <div class="col h-left">
+          <h4>Layer 1 · sources</h4>
+          <ul>
+            <li>The original documents — files, scans, exports</li>
+            <li>Organised into categories you define for your domain</li>
+            <li><strong>Immutable</strong> — never edited, only renamed or moved</li>
+            <li>Treated as authoritative ground truth</li>
+          </ul>
+        </div>
+        <div class="div"></div>
+        <div class="col h-mid">
+          <h4>Layer 2 · synthesis</h4>
+          <ul>
+            <li>The Markdown layer the agent owns entirely</li>
+            <li>One summary page per source; rolled-up entity &amp; topic pages</li>
+            <li>An index catalog, an op log, a dashboard, saved analyses</li>
+            <li>Always kept current as new sources arrive</li>
+          </ul>
+        </div>
+      </div>
+      <p>A third layer — call it the <strong>schema</strong> — is a single instruction file that defines the directory layout, naming conventions, the frontmatter spec, and the workflows. It is the agent's constitution, and it co-evolves with the store rather than sitting frozen above it.</p>
+
+      <div class="tree">
+<span class="root">knowledge-base/</span>
+├─ <span class="f">SCHEMA.md</span>            <span class="c">› the agent's constitution — conventions &amp; workflows</span>
+├─ <span class="d">inbox/</span>               <span class="c">› drop zone for new sources awaiting ingest</span>
+├─ <span class="d">raw/</span>                 <span class="c">› immutable source documents</span>
+│   └─ <span class="d">&lt;category&gt;/</span>        <span class="c">› your domain's categories (define your own)</span>
+└─ <span class="d">kb/</span>                  <span class="c">› the synthesised knowledge layer</span>
+    ├─ <span class="f">index.md</span>         <span class="c">› catalog of every page, by category</span>
+    ├─ <span class="f">log.md</span>           <span class="c">› append-only chronological op log</span>
+    ├─ <span class="f">overview.md</span>      <span class="c">› "current state of affairs" dashboard</span>
+    ├─ <span class="d">entities/</span>        <span class="c">› people, orgs, accounts — 1 page each</span>
+    ├─ <span class="d">topics/</span>          <span class="c">› cross-cutting themes</span>
+    ├─ <span class="d">sources/</span>         <span class="c">› 1 summary page per ingested document</span>
+    └─ <span class="d">queries/</span>         <span class="c">› saved analyses, comparisons, reports</span>
+      </div>
+
+      <p>The connective tissue is the same idea as agent memory, scaled up: <strong>YAML frontmatter</strong> on every page (so the store is queryable by category, date, or tag) and <strong><code>[[wiki-links]]</code></strong> through the prose (so entities, topics and sources form one navigable graph). When the agent mentions something that lacks a page, it creates a stub rather than leaving a dead reference.</p>
+    </section>
+
+    <!-- 6 -->
+    <section id="ingest">
+      <h2><span class="num">06</span>The ingest pipeline</h2>
+      <p class="sec-sub">Where agent memory compiles a lesson into a fact, the knowledge base compiles a raw document into synthesised, cross-linked knowledge. The recipe is deterministic.</p>
+
+      <div class="flow">
+        <div class="step kb"><span class="n"></span><div class="b"><h4>Read &amp; classify</h4><p>A file lands in <code>inbox/</code>. The agent reads it (text and PDFs natively; images via OCR) and classifies category, type, date, and the parties involved.</p></div></div>
+        <div class="step kb"><span class="n"></span><div class="b"><h4>Surface anything notable first</h4><p>Anything surprising, anomalous, or contradicting an existing page is raised before filing — never summarised and stored silently.</p></div></div>
+        <div class="step kb"><span class="n"></span><div class="b"><h4>Rename &amp; move into raw/</h4><p>Into <code>raw/&lt;category&gt;/</code> under a consistent, sortable naming convention; near-duplicates are detected and reconciled.</p></div></div>
+        <div class="step kb"><span class="n"></span><div class="b"><h4>Write the source page</h4><p>A <code>kb/sources/</code> page mirroring the filename — summary, key facts, notes, cross-references — built from a fixed template.</p></div></div>
+        <div class="step kb"><span class="n"></span><div class="b"><h4>Roll up into entities &amp; topics</h4><p>The affected entity and topic pages are updated: a line added, the source linked, totals and summaries revised where the document changes them. <em>This is the synthesis step.</em></p></div></div>
+        <div class="step kb"><span class="n"></span><div class="b"><h4>Record &amp; index</h4><p>A line appended to the op log; the new source added to the catalog. The index stays current; nothing becomes an orphan.</p></div></div>
+      </div>
+
+      <p>Two companion workflows keep the synthesis honest. <strong>Query</strong> reads the catalog first, then the most relevant pages (preferring synthesis over re-reading raw files), and offers to save substantial answers into <code>queries/</code>. <strong>Lint</strong> sweeps for contradictions, stale claims, orphan pages, implicit entities that lack a page, missing cross-references, and data gaps — saving a dated report.</p>
+    </section>
+
+    <!-- 7 -->
+    <section id="build">
+      <h2><span class="num">07</span>How to build it yourself</h2>
+      <p class="sec-sub">You need an agentic assistant with three capabilities: it can read and write files, it can read documents (PDFs, images), and it has a persistent cross-session memory. Given that, the rest is convention.</p>
+
+      <div class="flow">
+        <div class="step build"><span class="n"></span><div class="b"><h4>Create the folders</h4><p>Make <code>inbox/</code>, <code>raw/</code>, and <code>kb/</code> (with <code>entities/ topics/ sources/ queries/</code>). Put it under version control from day one — every operation becomes a reviewable commit.</p></div></div>
+        <div class="step build"><span class="n"></span><div class="b"><h4>Write the schema — the constitution</h4><p>This single instruction file is what turns a generic assistant into a consistent librarian. Specify: the three layers and folder map; file-naming rules; the frontmatter fields every page must carry; the ingest / query / lint workflows step by step; and the privacy rules. Keep it editable — it co-evolves with the store.</p></div></div>
+        <div class="step build"><span class="n"></span><div class="b"><h4>Fix the conventions</h4><p>Decide your categories, your frontmatter schema (e.g. <code>type · category · date · related · tags</code>), and adopt <code>[[wiki-links]]</code> for cross-references. Consistency here is what later makes the store queryable.</p></div></div>
+        <div class="step build"><span class="n"></span><div class="b"><h4>Define the workflows as named recipes</h4><p>Give each workflow a trigger and a fixed sequence of steps (see §06). Naming them — "ingest", "query", "lint" — lets you invoke them with one word and get repeatable behaviour.</p></div></div>
+        <div class="step build"><span class="n"></span><div class="b"><h4>Seed and grow agent memory</h4><p>Write a few starting facts — your preferences, your standing instructions — as one-fact files plus an index. Then let it accrete: whenever you correct the agent, capture the lesson as a <code>feedback</code> fact so it sticks.</p></div></div>
+        <div class="step build"><span class="n"></span><div class="b"><h4>Set the privacy boundary</h4><p>Declare the store local-only by default, and require explicit confirmation before anything leaves the machine. Make this a rule in the schema, not an afterthought.</p></div></div>
+        <div class="step build"><span class="n"></span><div class="b"><h4>Run it, then lint it</h4><p>Drop documents in <code>inbox/</code> and ingest. After a batch, run a lint pass to catch contradictions and gaps. Let the schema evolve as you discover what conventions you actually need.</p></div></div>
+      </div>
+
+      <div class="note privacy"><b>The schema is the whole product.</b> Everything distinctive about the system lives in that one instruction file. Tools and models are interchangeable; a clear, opinionated schema is what makes the output consistent, queryable, and trustworthy over months of use.</div>
+    </section>
+
+    <!-- 8 -->
+    <section id="cobuild">
+      <h2><span class="num">08</span>Build it with an agent</h2>
+      <p class="sec-sub">The checklist above is the manual path. The faster, friendlier one: hand a single playbook to your assistant and let it build the system <em>with</em> you — where building is the design, the onboarding, and the tutorial, all at once.</p>
+
+      <p class="lead">Give your agent <a class="inl" href="build-with-agent.md"><code>build-with-agent.md</code></a> and it runs a guided, eleven-phase co-build: it explains each concept, interviews you to tailor the shape, builds the artifact only after you approve a diff, proves it works, then logs what changed and why. You don't end with a folder you don't understand — you end with one you helped make.</p>
+
+      <h3>Every phase runs the same loop</h3>
+      <p>Predictable rhythm, so you always know where you are and never get a silent change:</p>
+      <div class="loop">
+        <span class="b hl">TEACH</span><span class="ar">→</span>
+        <span class="b">TAILOR</span><span class="ar">→</span>
+        <span class="b">BUILD</span><span class="ar">→</span>
+        <span class="b">VERIFY</span><span class="ar">→</span>
+        <span class="b">CHECKPOINT</span><span class="ar">→</span>
+        <span class="b">LOG</span>
+      </div>
+      <p>Explain the concept and why it matters · ask only what's needed to tailor it · build it after a confirmed diff · look at the result together · recap and check understanding · record the decision. Stop any time and the system is left working at the last completed phase.</p>
+
+      <h3>The eleven phases</h3>
+      <div class="phasemap">
+        <div class="phase go"><span class="id">P0</span><div><h4>Orient &amp; contract</h4><p>Explain the journey, pick the directory, start <code>CHANGELOG.log</code>.</p></div></div>
+        <div class="phase go"><span class="id">P1</span><div><h4>Shape interview</h4><p>Scope, categories, goal, entities — <strong>and which skills &amp; extensions</strong> to include.</p></div></div>
+        <div class="phase"><span class="id">P2</span><div><h4>Scaffold</h4><p>Create the folders + <code>git init</code>; the three-layer store takes shape.</p></div></div>
+        <div class="phase"><span class="id">P3</span><div><h4>SCHEMA.md</h4><p>Write the tailored constitution — the one file that runs everything.</p></div></div>
+        <div class="phase"><span class="id">P4</span><div><h4>Seed agent memory</h4><p>Capture 2–4 standing preferences as one-fact memories.</p></div></div>
+        <div class="phase done"><span class="id">P5</span><div><h4>First real ingest</h4><p>Drop one real document; watch the pipeline run end to end.</p></div></div>
+        <div class="phase done"><span class="id">P6</span><div><h4>First real query</h4><p>Ask a real question; prove retrieval from the synthesis.</p></div></div>
+        <div class="phase"><span class="id">P7</span><div><h4>Build chosen skills</h4><p>Scaffold only the workflows you picked (<code>/ingest</code>, <code>/query</code>, <code>/lint</code>, …).</p></div></div>
+        <div class="phase"><span class="id">P8</span><div><h4>Wire chosen extensions</h4><p>Only the ones you chose — gog, Obsidian, research, automation.</p></div></div>
+        <div class="phase"><span class="id">P9</span><div><h4>Lint + self-document</h4><p>Health-check, then generate a plain-language <code>README</code>.</p></div></div>
+        <div class="phase"><span class="id">P10</span><div><h4>Handoff</h4><p>Walk the <code>CHANGELOG.log</code> together; you can now run it solo.</p></div></div>
+      </div>
+
+      <h3>Self-documenting by construction</h3>
+      <p>The build narrates itself as it goes, so the system stays legible long after the session. Two logs, kept distinct:</p>
+      <div class="twolog">
+        <div class="l"><div class="fn">CHANGELOG.log</div><p>The append-only story of <em>building and evolving</em> the system — each entry pairs a decision with the artifact it produced and the <em>why</em>. Written at the LOG beat of every phase.</p></div>
+        <div class="l ops"><div class="fn">kb/log.md</div><p>The routine <em>operations</em> log — one line per ingest, query, or lint, as the store is used day to day.</p></div>
+      </div>
+      <p>Plus the artifacts that explain themselves: <code>SCHEMA.md</code> (anyone who reads it can run the system), frontmatter on every page, and a generated <code>README.md</code> summarising what was built and decided.</p>
+
+      <div class="note privacy"><b>Generic until you personalise it.</b> The playbook ships anonymized and tool-agnostic; everything specific — your categories, entities, and examples — comes from <em>you</em>, at build time. Nothing leaves your machine without an explicit yes.</div>
+    </section>
+
+    <!-- 9 -->
+    <section id="extend">
+      <h2><span class="num">09</span>Extending the system</h2>
+      <p class="sec-sub">The core is just files and workflows, so new capabilities attach at the edges without disturbing it. Four are especially high-leverage — two move documents in and knowledge out, two upgrade how you connect and consume the store.</p>
+
+      <div class="ext">
+        <div class="extcard mail">
+          <div class="ic">@</div>
+          <span class="tag">Extension · inbound</span>
+          <h4>Email ingestion &amp; attachment processing</h4>
+          <p>Turn a mailbox into an automatic source feed, so documents file themselves.</p>
+          <ol>
+            <li>Connect a mail source via a connector (an email tool/plugin, or an IMAP poll). Watch one dedicated label or folder, not the whole inbox.</li>
+            <li>For each new message: capture sender, subject, date and body; save every attachment into <code>inbox/</code>.</li>
+            <li>Run the standard <strong>ingest</strong> workflow on each attachment. Write the message body itself as a source page too, when it carries information.</li>
+            <li>Process by type: PDFs read natively, images via OCR, spreadsheets/exports parsed into tables.</li>
+            <li>Mark the message processed (label/archive) and record its ID, so re-runs never double-ingest.</li>
+          </ol>
+        </div>
+        <div class="extcard research">
+          <div class="ic">⌕</div>
+          <span class="tag">Extension · outbound</span>
+          <h4>Deep-research integration</h4>
+          <p>Let the agent enrich the store with external context — verified and cited.</p>
+          <ol>
+            <li>Add a research workflow: take a question, fan out parallel web searches, fetch and read the best sources.</li>
+            <li>Adversarially verify key claims across independent sources before accepting them.</li>
+            <li>Synthesise a cited report and save it to <code>queries/</code> with frontmatter, linked to the relevant entities and topics.</li>
+            <li>Use it to answer "what are my options for X" questions and fold the conclusion back into the knowledge base.</li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="ext">
+        <div class="extcard gog">
+          <div class="ic">G</div>
+          <span class="tag">Extension · the concrete engine</span>
+          <h4>Google Workspace via <code>gog</code></h4>
+          <p>The generic "mail source" above, made real. <a class="inl" href="https://github.com/googleworkspace/cli">gog</a> (a.k.a. <code>gogcli</code>) is a fast, JSON-first CLI for Gmail, Drive, Calendar, Docs and Sheets — OAuth sign-in, multi-account, and shipped as an agent skill, so it scripts straight into your workflows.</p>
+          <ol>
+            <li><strong>Gmail →</strong> poll one label; pull message bodies and save attachments into <code>inbox/</code>, then run <strong>ingest</strong>.</li>
+            <li><strong>Drive →</strong> mirror a folder as a source feed — new files in Drive become new sources automatically.</li>
+            <li><strong>Calendar ←</strong> push a document's deadlines and required actions out as events; or pull events in as dated context.</li>
+            <li><strong>Docs / Sheets →</strong> read structured exports directly, no manual download step.</li>
+            <li>JSON output means every result is parseable — record processed IDs to stay idempotent.</li>
+          </ol>
+          <p style="font-size:13px;margin:4px 0 0;color:var(--ink-faint)">→ ready-made build prompt for the Gmail flow in <a class="inl" href="#setup">§10 · /ingest-email</a>.</p>
+        </div>
+        <div class="extcard obsidian">
+          <div class="ic">◆</div>
+          <span class="tag">Extension · the human layer</span>
+          <h4>Browse it as an Obsidian vault</h4>
+          <p>The store was <em>designed</em> for this: open <code>kb/</code> as a vault and the conventions light up. The agent writes the files; you read, navigate, and query them.</p>
+          <ol>
+            <li><strong>Graph view</strong> renders the <code>[[wiki-links]]</code> as a navigable map of entities, topics and sources.</li>
+            <li><strong>Dataview / Bases</strong> run live queries over the YAML frontmatter — "every source in category X since date Y" — exactly what the frontmatter spec was built for.</li>
+            <li><strong>Backlinks</strong> surface every page that references the one you're reading.</li>
+            <li><strong>Templates &amp; Canvas</strong> mirror the source-page template and let you assemble visual boards; mobile apps + your own sync keep it with you.</li>
+            <li>Zero lock-in — it's plain Markdown, readable with or without Obsidian.</li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="note privacy"><b>Mind the trust boundary.</b> The inbound and outbound extensions point in opposite directions. Ingestion — whether generic or via <code>gog</code> — only <em>pulls</em> in; it should never reply, forward, or send. Deep research reaches <em>out</em> to the open web, so research questions must be phrased generically and must never carry your private source content into a search query. Obsidian is purely local. Keep these flows separate by design, and scope any cloud connector to read-only where you can.</div>
+
+      <h3>Further extensions</h3>
+      <ul class="clean">
+        <li><strong>Specialised sub-agents</strong> — task-focused agents that read only a defined slice of the store (e.g. a filing assistant, or a per-topic analyst), so each works from exactly the right context.</li>
+        <li><strong>Scheduled runs</strong> — a periodic job that ingests whatever has arrived and runs a lint pass, so the store maintains itself.</li>
+        <li><strong>Semantic search</strong> — an embeddings index over the synthesis layer for fuzzy "where did I see…" retrieval, complementing the exact frontmatter queries.</li>
+        <li><strong>OCR &amp; transcription</strong> — pipelines that turn scans, photos, and audio into text before ingest, widening what counts as a "source".</li>
+      </ul>
+    </section>
+
+    <!-- 10 -->
+    <section id="setup">
+      <h2><span class="num">10</span>Guided setup — the onboarding interview</h2>
+      <p class="sec-sub">The fastest way to stand up a new instance is to let the agent do it: interview the user, then generate a scaffold tailored to their answers. This is itself an agent instruction you can drop into a <code>/setup</code> skill.</p>
+
+      <p>A blank folder and a generic schema are a cold start. Instead, the agent runs a short structured interview — one question at a time, reflecting answers back — to learn the <strong>shape</strong> of the store, its <strong>area of focus</strong>, the <strong>goal</strong> it serves, which <strong>extensions</strong> to wire, and which <strong>skills</strong> to create. From the answers it produces the folder scaffold, a <code>SCHEMA.md</code> written for that domain, a few seed memory facts, and a recommended tools plan.</p>
+
+      <div class="dropin">
+        <p class="cap">drop-in instruction · paste into your schema or a /setup skill</p>
+        <pre><span class="s">ROLE.</span> You are setting up a new two-memory knowledge base for a first-time
+user. Run the interview below <span class="o">one topic at a time</span>; reflect each answer back
+before moving on. Never invent categories or entities the user didn't confirm.
+
+<span class="s">INTERVIEW</span>
+  <span class="q">1 · SHAPE &amp; SCOPE</span>  What body of documents should this cover, and roughly
+                    how many to start? Just you, or shared with others?
+  <span class="q">2 · AREA OF FOCUS</span>  What domains live inside it? Name 4–8 categories for
+                    raw/ — we can always add more later.
+  <span class="q">3 · GOAL</span>          What decisions or questions should this help with?
+                    What does "this is working" look like in three months?
+  <span class="q">4 · ENTITIES</span>      Who or what recurs — people, organisations, accounts —
+                    that deserves its own page?
+  <span class="q">5 · EXTENSIONS</span>    Which to wire now?
+                    [ ] Obsidian vault     [ ] gog (Gmail / Drive / Calendar)
+                    [ ] deep research      [ ] scheduled ingest + lint
+  <span class="q">6 · SKILLS</span>        Which one-word workflows? Defaults: /ingest /query /lint.
+                    Add /digest (periodic summary)? /setup (re-run this)?
+  <span class="q">7 · PRIVACY</span>       Confirm: local-only, with explicit confirmation before
+                    anything leaves the machine — or state your exceptions.
+
+<span class="s">THEN PRODUCE</span> (show a diff before writing anything)
+  • scaffold:  inbox/  raw/&lt;category&gt;/  kb/{entities,topics,sources,queries}
+  • SCHEMA.md tailored to the answers — layers, naming, the frontmatter spec,
+    the ingest / query / lint recipes, and the privacy rule
+  • 2–4 seed agent-memory facts capturing stated preferences (user / feedback)
+  • INDEX.md + a stub overview.md
+  • a recommended skills &amp; tools plan (below), flagged exists vs build —
+    then offer to scaffold the "build" ones
+
+<span class="s">RULES.</span> One question at a time · confirm before filing · keep SCHEMA.md
+editable · prefer the user's words for category and entity names.</pre>
+      </div>
+
+      <h3>Tools to install</h3>
+      <p>Off-the-shelf pieces the interview can wire in. You install these once and reference them from your skills — there's nothing to build.</p>
+      <table class="skills">
+        <thead><tr><th>Tool</th><th>What it does</th><th>Get it</th></tr></thead>
+        <tbody>
+          <tr><td>gog (gogcli)</td><td>Gmail, Drive, Calendar, Docs, Sheets as a JSON-first feed.</td><td><code>npx skills add … --skill gog-cli</code> · <code>brew install gogcli</code></td></tr>
+          <tr><td>deep-research</td><td>Fan-out web research → adversarially verified, cited report.</td><td>Available as an agent skill</td></tr>
+          <tr><td>session hooks</td><td>Auto-capture lessons at session boundaries (see §11).</td><td>Configure in your agent settings</td></tr>
+          <tr><td>Obsidian + Dataview</td><td>Graph view of the links + live queries over the frontmatter.</td><td>obsidian.md + Dataview plugin</td></tr>
+          <tr><td>ripgrep (rg)</td><td>Instant full-text search across the store.</td><td><code>brew install ripgrep</code></td></tr>
+          <tr><td>pandoc</td><td>Convert docx / html / epub into Markdown for ingest.</td><td><code>brew install pandoc</code></td></tr>
+          <tr><td>ocrmypdf / tesseract</td><td>OCR scans and photos before they become sources.</td><td><code>brew install ocrmypdf</code></td></tr>
+          <tr><td>poppler (pdftotext)</td><td>Pull clean text and tables out of PDFs.</td><td><code>brew install poppler</code></td></tr>
+          <tr><td>git / gh</td><td>Version every operation; optional private remote.</td><td><code>brew install gh</code></td></tr>
+          <tr><td>rclone</td><td>Sync a cloud folder (Drive, Dropbox…) into <code>inbox/</code>.</td><td><code>brew install rclone</code></td></tr>
+        </tbody>
+      </table>
+
+      <h3>Skills to build — with a prompt for each</h3>
+      <p>None of these ship ready-made; each is a small skill the agent scaffolds for you. Hand it the build prompt and it creates the skill, wired to your <code>SCHEMA.md</code>.</p>
+      <div class="skillgrid">
+
+        <div class="skillcard">
+          <div class="top"><span class="nm">/ingest-email</span><span class="pill kind">skill</span></div>
+          <p class="purpose">Drains a Gmail label hands-off: pulls tagged messages, files the body, dumps attachments into the inbox, then marks each done.</p>
+          <pre class="bp"><span class="lbl">build prompt</span>Create an <b>ingest-email</b> skill that uses the <code>gog</code> CLI to drain a Gmail
+label end to end:
+1. List messages labelled <code>ingest-pending</code>
+   (e.g. <code>gog gmail messages list --label ingest-pending --json</code>).
+2. For each message, oldest first:
+   a. Write its body into the knowledge base as a <code>kb/sources/</code> page —
+      subject, sender, date, body — following the ingest workflow.
+   b. Download every attachment into <code>inbox/</code>
+      (<code>gog gmail attachments download &lt;id&gt; --out inbox/</code>).
+   c. Run <b>/ingest</b> over the new <code>inbox/</code> files so each attachment is
+      classified, filed into <code>raw/</code>, and summarised.
+3. On success, relabel: remove <code>ingest-pending</code>, add <code>ingest-done</code>
+   (<code>gog gmail messages modify &lt;id&gt; --remove-label ingest-pending --add-label ingest-done</code>).
+<b>Rules:</b> pull-only — never delete, reply, or forward. Record processed
+message IDs for idempotency; skip anything already <code>ingest-done</code>; if a
+message fails, leave its label untouched so the next run retries it.
+(gog flags are indicative — confirm against your installed gog version.)</pre>
+        </div>
+
+        <div class="skillcard">
+          <div class="top"><span class="nm">/ingest</span><span class="pill kind">skill</span></div>
+          <p class="purpose">Run the ingest workflow over everything sitting in <code>inbox/</code>.</p>
+          <pre class="bp"><span class="lbl">build prompt</span>Create an <b>ingest</b> skill that runs the ingest workflow from SCHEMA.md over
+every file in <code>inbox/</code>: read &amp; classify each, surface anything notable first,
+rename + move into <code>raw/&lt;category&gt;/</code>, write a <code>kb/sources/</code> page from the
+template, roll the facts up into the affected entity &amp; topic pages, append to
+<code>log.md</code>, and update <code>index.md</code>. Show a diff before writing; leave <code>inbox/</code> empty.</pre>
+        </div>
+
+        <div class="skillcard">
+          <div class="top"><span class="nm">/query</span><span class="pill kind">skill</span></div>
+          <p class="purpose">Answer a question from the synthesis, and offer to save it.</p>
+          <pre class="bp"><span class="lbl">build prompt</span>Create a <b>query</b> skill that answers a question by reading <code>index.md</code> first,
+then the most relevant <code>kb/</code> pages (prefer synthesis over re-reading raw files),
+cites the pages it used, and offers to save substantial answers to
+<code>kb/queries/</code> with frontmatter.</pre>
+        </div>
+
+        <div class="skillcard">
+          <div class="top"><span class="nm">/lint</span><span class="pill kind">skill</span></div>
+          <p class="purpose">Health-check the store for drift and gaps.</p>
+          <pre class="bp"><span class="lbl">build prompt</span>Create a <b>lint</b> skill that scans the store for contradictions, stale claims,
+orphan pages, implicit entities lacking a page, missing cross-references, and
+data gaps, then writes a dated report to <code>kb/queries/lint-YYYY-MM-DD.md</code>.</pre>
+        </div>
+
+        <div class="skillcard">
+          <div class="top"><span class="nm">/setup</span><span class="pill kind">skill</span></div>
+          <p class="purpose">Re-runnable onboarding interview + scaffolder.</p>
+          <pre class="bp"><span class="lbl">build prompt</span>Create a <b>setup</b> skill that runs the onboarding interview in §10 one question
+at a time and then scaffolds the folders, a tailored <code>SCHEMA.md</code>, 2–4 seed
+agent-memory facts, and a recommended tools plan — showing a diff before writing.</pre>
+        </div>
+
+        <div class="skillcard">
+          <div class="top"><span class="nm">/digest</span><span class="pill kind">skill</span></div>
+          <p class="purpose">Periodic "what changed / what needs action" summary.</p>
+          <pre class="bp"><span class="lbl">build prompt</span>Create a <b>digest</b> skill that reads <code>log.md</code> and page frontmatter to
+summarise what changed since the last run (new sources, updated topics) and
+what needs action (upcoming deadlines, open items), and offers to save the
+digest to <code>kb/queries/</code>.</pre>
+        </div>
+
+        <div class="skillcard">
+          <div class="top"><span class="nm">watch-inbox</span><span class="pill kind">hook / script</span></div>
+          <p class="purpose">Fire ingest automatically when new sources land.</p>
+          <pre class="bp"><span class="lbl">build prompt</span>Create a <b>watch-inbox</b> script/hook that triggers <b>/ingest</b> whenever a new
+file appears in <code>inbox/</code> (filesystem watcher) or on a schedule, and that can
+optionally first run <b>/ingest-email</b> and an <code>rclone</code> pull to gather sources.</pre>
+        </div>
+
+        <div class="skillcard">
+          <div class="top"><span class="nm">compile.py</span><span class="pill kind">script</span></div>
+          <p class="purpose">Distil accumulated session logs into memory facts (see §11).</p>
+          <pre class="bp"><span class="lbl">build prompt</span>Create a <b>compile.py</b> that reads the day's session logs from <code>daily/</code>,
+extracts durable lessons and preferences, deduplicates against existing memory
+files, writes new one-fact files (name · description · type · body), and updates
+the memory <code>INDEX.md</code>. Designed to run unattended on a schedule.</pre>
+        </div>
+
+        <div class="skillcard">
+          <div class="top"><span class="nm">entity-dedup &amp; frontmatter-lint</span><span class="pill kind">scripts</span></div>
+          <p class="purpose">Keep the graph and the metadata clean.</p>
+          <pre class="bp"><span class="lbl">build prompt</span>Create two small scripts: <b>entity-dedup</b> detects and proposes merges for
+duplicate entity pages (same person/org under different names); <b>frontmatter-lint</b>
+validates that every <code>kb/</code> page carries its required YAML fields and reports
+violations. Both read-only by default — they propose, you approve.</pre>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- 11 -->
+    <section id="automate">
+      <h2><span class="num">11</span>Automating the compile loop</h2>
+      <p class="sec-sub">Everything so far treats writing to agent memory as a manual act — you notice a durable lesson and save it. It can be automated end to end.</p>
+
+      <div class="attrib">
+        <span class="mk">build on</span>
+        <div>The cleanest published take on this is <a class="inl" href="https://github.com/coleam00/claude-memory-compiler">coleam00/claude-memory-compiler</a>, which turns assistant conversations into a compiled knowledge base. Its moves transplant directly onto the agent-memory side of this architecture — credit to that project for the pattern.</div>
+      </div>
+
+      <div class="flow">
+        <div class="step"><span class="n"></span><div class="b"><h4>Auto-capture with hooks</h4><p>Session-boundary hooks (at session end, and before context is compacted) read the transcript and append raw observations to a <strong>daily log</strong> — <code>daily/YYYY-MM-DD.md</code>. Capture becomes automatic; nothing depends on remembering to save.</p></div></div>
+        <div class="step"><span class="n"></span><div class="b"><h4>Decouple capture from compilation</h4><p>Capture is cheap and continuous; <strong>compilation</strong> is batched and unattended. A scheduled <code>compile.py</code> (say, nightly) distils the day's logs into structured, deduplicated concept articles — the same read/write compile of §04, run on a timer instead of inline.</p></div></div>
+        <div class="step"><span class="n"></span><div class="b"><h4>Retrieve through the index</h4><p>A <code>query.py</code> answers questions by reading the catalog, not a vector store — fast, legible, and debuggable.</p></div></div>
+        <div class="step"><span class="n"></span><div class="b"><h4>Lint with many validators</h4><p>A <code>lint.py</code> runs a battery of checks — broken links, orphaned articles, contradictions, staleness — the automated form of the Lint workflow in §06.</p></div></div>
+      </div>
+
+      <div class="note"><b>Design rule — index before embeddings.</b> At personal scale (roughly 50–500 notes, and comfortably up to ~2000), an agent reading a structured <code>index.md</code> outperforms vector similarity search: simpler, cheaper, and far more legible. Only reach for embeddings or a RAG store once the index itself no longer fits comfortably in context. This is exactly why the whole system is plain files, not a database.</div>
+
+      <p>An optional refinement from the same project: split the synthesis into <code>concepts/</code> (the articles), <code>connections/</code> (explicit cross-references), and <code>qa/</code> (captured question–answer pairs) — a finer-grained shape for the compiled layer once it grows.</p>
+    </section>
+
+    <!-- 12 -->
+    <section id="principles">
+      <h2><span class="num">12</span>Design principles</h2>
+      <p class="sec-sub">The handful of rules that keep the system trustworthy as it scales.</p>
+      <ul class="clean">
+        <li><strong>Two memories, kept apart.</strong> Method in agent memory, matter in the knowledge base. Don't let one bleed into the other.</li>
+        <li><strong>Sources are immutable.</strong> The synthesis can be rewritten freely; the originals never change. This is what lets you trust the store.</li>
+        <li><strong>Everything is plain files.</strong> Markdown, frontmatter, folders, version control. No database to migrate, nothing you can't open by hand.</li>
+        <li><strong>Observe before interpreting.</strong> When data is ambiguous, record what's visible and ask — don't let a plausible guess harden into a recorded "fact".</li>
+        <li><strong>Local-first, explicit egress.</strong> Nothing leaves the machine without a deliberate, confirmed step. Outward-facing features are the exception, fenced off and clearly labelled.</li>
+        <li><strong>The schema co-evolves.</strong> Treat the constitution as living; refine it whenever you discover a convention you wish you'd had.</li>
+      </ul>
+    </section>
+
+  </main>
+</div>
+</div>
+
+<footer>
+  <div class="wrap">
+    <p>The Two-Memory Architecture — a reusable blueprint · plain Markdown, local-first, privacy-preserving · adapt the schema to your own domain</p>
+  </div>
+</footer>
+
+</body>
+</html>
