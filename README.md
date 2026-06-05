@@ -73,9 +73,10 @@ it.
 ## A brain that travels
 
 Memory is split by portability. The **in-folder** `memory/` is the agent's
-**portable brain** (conventions, gotchas, learned solutions) and `tools/` is a
-**self-arming toolbox** (scripts distilled from the `daily/` logs as recurring
-work shows up) — both travel with the folder. The **harness/machine memory**
+**portable brain** — a **cross-linked knowledge graph** of conventions, gotchas
+and learned solutions (typed facts with `[[wiki-links]]`, like the kb but tuned
+for *method*) — and `tools/` is a **self-arming toolbox** (scripts distilled from
+the `daily/` logs as recurring work shows up). Both travel with the folder. The **harness/machine memory**
 holds only machine-specific facts (VPN, OS quirks, paths). Move the folder to a
 new machine and behaviour is preserved; only machine memory differs. The
 auto-loaded `AGENTS.md`/`CLAUDE.md` wire all of this into each session.

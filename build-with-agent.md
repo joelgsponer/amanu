@@ -108,8 +108,26 @@ You keep that true:
 **The portable brain & the toolbox** — two in-folder stores make the system carry
 its own behaviour:
 - **`memory/`** — the agent-memory: *everything about working this KB* —
-  conventions (global + per-project), gotchas, and solutions you work out. One
-  fact per file + `memory/index.md`. Keep adding to it as you learn.
+  conventions (global + per-project), gotchas, and solutions you work out. It is a
+  **cross-linked knowledge graph**, like `kb/` but tuned for *method*: one fact per
+  file, each with frontmatter and `[[wiki-links]]` to related nodes;
+  `memory/index.md` is the entry point. Keep adding to it as you learn.
+  - **Node types** (`type:`): `convention` · `gotcha` · `solution` · `preference`
+    · `procedure` · `tool` (a pointer to a `tools/` entry).
+  - **Edges** (frontmatter keys + inline links): `related` · `solves`/`caused-by`
+    · `supersedes` (retire a stale fact without deleting history) · `applies-to`
+    (→ a `kb/` category/entity/topic) · `implemented-by` (→ a `tools/` tool).
+  - So **method ↔ matter ↔ toolbox** form one graph — a gotcha can `applies-to`
+    a kb topic and be `implemented-by` a tool. Example fact frontmatter:
+    ```yaml
+    ---
+    type: gotcha
+    tags: [obsidian, vault]
+    applies-to: [[obsidian-vault]]
+    implemented-by: [[fix-vault-root]]   # a tool, if one exists
+    related: [[kb-conventions]]
+    ---
+    ```
 - **`tools/`** — a **self-arming** toolbox of scripts for this KB's recurring
   work, each catalogued in `tools/index.md` with its purpose and **lifecycle
   (start / stop / status)**. When you process `daily/` logs, turn recurrent
@@ -258,19 +276,23 @@ Each phase runs the six beats. Adapt wording; hit every beat; honour *Done when*
   `AGENTS.md` (+ `CLAUDE.md` pointer) exist, adapted, and describe memory/tools.
 
 ### P4 · Seed the portable brain
-- **TEACH** — `memory/` is the *portable brain*: durable facts about working this
-  KB — conventions, gotchas, and solutions you'll work out over time. One fact per
-  file, recalled when relevant. It travels with the folder, and **grows** as the
-  system is used (the self-arming loop, below, feeds it from `daily/`).
+- **TEACH** — `memory/` is the *portable brain*: a **cross-linked graph** of
+  durable facts about working this KB — conventions, gotchas, solutions — tuned
+  for *method* the way `kb/` is tuned for *matter*. It travels with the folder and
+  **grows** as the system is used (the self-arming loop feeds it from `daily/`).
 - **TAILOR** — ask for 2–4 starting facts (summary style, "ask before inferring",
   what to always flag, any known gotcha for this domain).
-- **BUILD** — write each as a one-fact file (`name`/`description`/`type` + body) in
-  `memory/`, and update `memory/index.md`. Note that `compile-memory` (if chosen)
-  will later distil `daily/` logs into more facts **and tools**.
-- **VERIFY** — show the facts and each index line.
+- **BUILD** — write each as a one-fact file with frontmatter (`type` from the
+  ontology in §C, `tags`, and any `related`/`applies-to`/`implemented-by`
+  `[[links]]`) + body, and **cross-link** related facts, kb pages, or tools.
+  Update `memory/index.md` as the graph's entry point. Note that `compile-memory`
+  (if chosen) will later distil `daily/` logs into more facts **and tools**, and
+  maintain the links.
+- **VERIFY** — show the facts, their links, and the index.
 - **CHECKPOINT** — "these shape *how* I work for you here — anything to add?"
-- **LOG** — `P4 · seeded N brain facts`.
-- **Done when:** ≥2 fact files + `memory/index.md` exist.
+- **LOG** — `P4 · seeded N brain facts (linked)`.
+- **Done when:** ≥2 typed fact files + `memory/index.md` exist, with at least one
+  cross-link.
 
 ### P5 · First real ingest *(prove the loop)*
 - **TEACH** — run the real pipeline on one real document, narrating each step.

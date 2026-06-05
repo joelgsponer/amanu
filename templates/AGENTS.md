@@ -27,9 +27,15 @@ This system splits memory by **what travels with the folder**:
 
 - **`memory/` — the portable brain (in this folder).** It owns *everything about
   working this knowledge base*: conventions (global and per-project), important
-  **gotchas**, and **solutions you work out** as problems arise here. One fact per
-  file, indexed in `memory/index.md`. Treat it as authoritative and **keep adding
-  to it** — when you learn something durable about this KB, write it here.
+  **gotchas**, and **solutions you work out** as problems arise here. It's a
+  **cross-linked graph**, like `kb/` but tuned for *method*: one fact per file,
+  each with frontmatter and `[[wiki-links]]`, indexed in `memory/index.md`.
+  - Node `type`: `convention` · `gotcha` · `solution` · `preference` · `procedure`
+    · `tool`. Link facts with `related` / `solves` / `supersedes` / `applies-to`
+    (→ a `kb/` page) / `implemented-by` (→ a `tools/` tool).
+  - Treat it as authoritative and **keep adding to it** — when you learn something
+    durable, write a typed fact and **link it** to the related facts, the kb pages
+    it concerns, and any tool that implements it; update `memory/index.md`.
 - **The harness/machine memory (outside this folder, e.g. `~/.claude/…`).** This
   holds **machine-specific** facts only — "this box needs the VPN for X", "on this
   Mac do Y this way", local install paths. It stays with the *machine*, not the
