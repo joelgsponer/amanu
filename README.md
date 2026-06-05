@@ -51,9 +51,23 @@ prompts**. Prefer the raw plan? It's all in [`build-with-agent.md`](build-with-a
 | File | Purpose |
 |------|---------|
 | `build-with-agent.md` | The agent-driven build playbook — the executable spec. |
-| `extensions.md` | The extension catalog — ~25 plug-ins across 5 categories, each with a build prompt, trust class, and tier. |
+| `extensions.md` | The extension catalog (**source of truth**) — 28 plug-ins across 5 categories, each with a complete, preference-asking build prompt, trust class, and tier. |
 | `knowledge-base-architecture.html` | Human-first guide — how it works, plus the full extension catalogue with copy-paste build prompts. |
 | `index.html` | Redirect so GitHub Pages opens the overview. |
+| `tools/gen-catalogue.py` | Regenerates the website's catalogue from `extensions.md` (keeps the two in sync). |
+
+### Maintaining the catalogue
+
+`extensions.md` is the single source of truth. After editing a prompt there, run
+the generator to update the website's copy-paste cards:
+
+```sh
+python3 tools/gen-catalogue.py          # rewrite the HTML catalogue block
+python3 tools/gen-catalogue.py --check  # CI-style: non-zero if out of sync
+```
+
+The HTML between the `CATALOGUE:START/END` markers is generated — don't hand-edit
+it.
 
 ## Grows in tiers
 

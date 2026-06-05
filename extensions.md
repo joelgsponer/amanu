@@ -8,7 +8,13 @@ sharpen it — without touching the core.
 This file is both a **menu** the build agent reads to offer choices, and a
 **reference** humans read to understand the ecosystem. Each entry ships only as a
 **build prompt**: the agent scaffolds it, wired to your `SCHEMA.md`, at build
-time.
+time. The prompts are deliberately complete — they tell the agent exactly what to
+build *and* which preferences to ask you for first, because this is a
+build-together system.
+
+> **This file is the single source of truth for the catalogue.** The copy-paste
+> cards on the website are generated from it by `tools/gen-catalogue.py` — edit
+> prompts here, then run the generator to sync the HTML.
 
 ---
 
@@ -65,190 +71,279 @@ are never fused into one step.
 ---
 
 ## Inbound — feed the store
+*Turn the world's documents into sources, automatically.*
 
 ### email · inbound · Connected
-- **Adds:** a Gmail label becomes an automatic source feed.
-- **Needs:** `gog` (Google Workspace CLI). **Secrets:** none (`gog` uses its own OAuth login).
-- **Build prompt:** *Create an `ingest-email` skill that lists Gmail messages labelled `ingest-pending`; for each (oldest first) writes the body to `kb/sources/` and downloads attachments to `inbox/`, runs `/ingest`, then relabels `ingest-pending`→`ingest-done`. Pull-only, idempotent (skip already-done), leave the label on failure so the next run retries.*
+- **Adds:** A Gmail label becomes an automatic source feed.
+- **Needs:** `gog` (Google Workspace CLI) · **Secrets:** none — `gog` uses its own OAuth login.
 - **Trust note:** never sends, replies, or forwards.
 
+```text
+Create an `ingest-email` skill, wired to my SCHEMA.md, that turns a Gmail label into an automatic source feed. First ask me: which label marks messages to ingest (suggest `ingest-pending`); whether to file the message body as its own source page or only the attachments; and what to do with a message once handled — relabel it (suggest `ingest-done`), archive it, or leave it. Then, for each matching message oldest-first, write the body to `kb/sources/` with sender, subject and date in frontmatter, download every attachment into `inbox/`, run `/ingest` over the new files, and apply the agreed post-step. Use `gog` (its own OAuth login — no API key). Keep it pull-only (never reply, forward, or send), idempotent (record processed message IDs and skip anything already handled), and resilient (on any failure leave the message's label untouched so the next run retries it). Before processing the batch, show me the first message it would file and confirm; verify by running once and opening the resulting source page together.
+```
+
 ### drive-sync · inbound · Connected
-- **Adds:** a cloud folder (Google Drive, Dropbox…) mirrors into `inbox/`.
-- **Needs:** `gog` (Drive) or `rclone`. **Secrets:** none for `gog`; `rclone` stores its own config (keep it out of git).
-- **Build prompt:** *Create a `sync-drive` skill/hook that pulls new/changed files from a named remote folder into `inbox/`, records synced file IDs for idempotency, then runs `/ingest`.*
+- **Adds:** A cloud folder mirrors into the inbox.
+- **Needs:** `gog` (Drive) or `rclone` · **Secrets:** none for `gog`; `rclone` keeps its own config (out of git).
 - **Trust note:** read-only on the remote; never uploads.
 
+```text
+Create a `sync-drive` skill (or watch hook), wired to my SCHEMA.md, that mirrors a cloud folder into `inbox/`. First ask me: which remote and folder to watch; whether to use `gog` (Google Drive) or `rclone` (Dropbox, S3, others); whether to pull on demand or on a schedule; and whether to mirror sub-folders. Then pull new or changed files into `inbox/`, recording each remote file ID and version so re-runs skip unchanged files, and run `/ingest` over whatever arrived. Stay read-only on the remote — never upload or delete there. If you use `rclone`, keep its config file out of git. Verify by syncing once and showing me the files it brought in and the source pages `/ingest` produced.
+```
+
 ### scan-ocr · inbound · Connected
-- **Adds:** scans and photos become searchable text sources.
-- **Needs:** `ocrmypdf` / `tesseract`. **Secrets:** none (local).
-- **Build prompt:** *Create a `scan-ocr` step that, for image/PDF files in `inbox/`, runs OCR to produce a text layer before `/ingest` reads them; keep the original in `raw/`.*
+- **Adds:** Scans and photos become searchable text sources.
+- **Needs:** `ocrmypdf` / `tesseract` · **Secrets:** none.
 - **Trust note:** fully local.
 
+```text
+Create a `scan-ocr` step, wired to my SCHEMA.md, that makes scanned PDFs and photos searchable before they're ingested. First ask me: which OCR language(s) to use; whether to embed a text layer into the PDF or write a sidecar text file; and whether to keep the original image alongside the text. Then, for image and image-only PDF files landing in `inbox/`, run OCR locally (`ocrmypdf`/`tesseract`) to add the text, keep the original in `raw/`, and let `/ingest` read the now-text-bearing file. Skip files that already carry a text layer so re-runs are cheap. Everything stays on the machine — no network. Verify on one scanned document: show the extracted text and the resulting source page.
+```
+
 ### web-clipper · inbound · Connected
-- **Adds:** a URL → a clean Markdown source page.
-- **Needs:** a fetch tool + `pandoc`/readability. **Secrets:** none.
-- **Build prompt:** *Create a `clip` skill that takes a URL, fetches and converts the main content to Markdown, writes it as a `kb/sources/` page with `source_url` in frontmatter, and links relevant entities/topics.*
-- **Trust note:** fetches public pages only; outbound fetch, no private data leaves.
+- **Adds:** A URL becomes a clean Markdown source page.
+- **Needs:** a fetch tool + `pandoc`/readability · **Secrets:** none.
+- **Trust note:** fetches public pages only; no private data leaves.
+
+```text
+Create a `clip` skill, wired to my SCHEMA.md, that turns a URL into a clean source page. First ask me: which category clipped pages belong to; whether to store the full article text or a short summary plus the link; and how to tag them. Then fetch the page, extract the main readable content (readability/`pandoc`), convert it to Markdown, and write it to `kb/sources/` with `source_url`, title, author and fetch-date in frontmatter, linking any entities or topics it mentions. De-duplicate by URL so re-clipping updates rather than duplicates. Only the public URL is fetched — no private content leaves the machine. Verify by clipping one URL and reviewing the page together.
+```
 
 ### audio-transcribe · inbound · Connected
-- **Adds:** voice memos / meeting audio become text sources.
-- **Needs:** a local transcription tool (e.g. `whisper`). **Secrets:** none if local; an API key if using a hosted model.
-- **Build prompt:** *Create a `transcribe` step that turns audio files in `inbox/` into text, files the transcript as a `kb/sources/` page, and keeps the audio in `raw/`.*
+- **Adds:** Voice memos & meetings become text sources.
+- **Needs:** a transcription tool (e.g. `whisper`) · **Secrets:** none if local; an API key if hosted.
 - **Trust note:** prefer a local model to keep audio on-machine.
 
+```text
+Create a `transcribe` step, wired to my SCHEMA.md, that turns audio into text sources. First ask me — and flag the privacy trade-off — whether to use a local model (e.g. `whisper`, nothing leaves the machine) or a hosted one (which sends audio to an API and needs a key); the spoken language; and whether to attempt speaker labels. Then transcribe audio files arriving in `inbox/`, write the transcript to `kb/sources/` with date and duration in frontmatter, keep the original audio in `raw/`, and link the people and topics it concerns. Skip already-transcribed files. Default to the local model; if I choose a hosted one, store its key in `.env` and confirm before sending anything. Verify on one clip: show the transcript and its source page.
+```
+
 ### calendar-pull · inbound · Connected
-- **Adds:** calendar events become dated context the KB can reference.
-- **Needs:** `gog` (Calendar). **Secrets:** none.
-- **Build prompt:** *Create a `pull-calendar` skill that imports events in a date window as dated notes/source pages, linked to the entities they involve.*
+- **Adds:** Calendar events become dated context.
+- **Needs:** `gog` (Calendar) · **Secrets:** none.
 - **Trust note:** read-only.
 
+```text
+Create a `pull-calendar` skill, wired to my SCHEMA.md, that brings calendar events in as dated context. First ask me: which calendar(s) to read; the date window (e.g. the next 30 days, or a fixed range); and whether to import all events or only those matching a keyword. Then read events read-only via `gog`, write each as a dated note/source page with start, end, location and attendees in frontmatter, and link the entities they involve. Key each page by event ID so re-runs update rather than duplicate. Read-only — it never creates or edits events. Verify on the chosen window: show the events it imported and one resulting page.
+```
+
 ### csv-import · inbound · Connected
-- **Adds:** tabular/financial exports (bank CSVs, spreadsheets) become structured sources.
-- **Needs:** a CSV parser (built-in). **Secrets:** none.
-- **Build prompt:** *Create an `import-csv` skill that parses a CSV/XLSX in `inbox/` into a normalized table page under `kb/sources/`, with column mapping confirmed by the user; never infers transaction meaning — record observations, ask before interpreting.*
+- **Adds:** Tabular & financial exports become structured sources.
+- **Needs:** a CSV parser (built-in) · **Secrets:** none.
 - **Trust note:** local; flag any secrets/account numbers for the user.
 
+```text
+Create an `import-csv` skill, wired to my SCHEMA.md, that turns spreadsheets and CSV/financial exports into structured sources. First ask me: which category these belong to; the delimiter and encoding if non-standard; which columns map to which fields (show me the detected header row and let me confirm the mapping); and whether each row becomes a line item or the whole file becomes one table page. Then parse the file from `inbox/` into a normalized table page under `kb/sources/` with the mapping recorded in frontmatter. Crucially, never infer what a transaction or value means — record only what is observable and ask me before drawing any conclusion. Flag any apparent account numbers, IBANs or secrets for me to review rather than storing them silently. Verify on one file: show the parsed table and the column mapping.
+```
+
 ### messaging-export · inbound · Connected
-- **Adds:** exported chat threads (Signal/Telegram/WhatsApp) become sources.
-- **Needs:** the platform's export + a parser. **Secrets:** none.
-- **Build prompt:** *Create an `import-chat` skill that parses an exported chat archive into a dated `kb/sources/` page, redacting anything the user marks private.*
+- **Adds:** Exported chat threads become sources.
+- **Needs:** the platform's export + a parser · **Secrets:** none.
 - **Trust note:** local; treat content as sensitive.
+
+```text
+Create an `import-chat` skill, wired to my SCHEMA.md, that turns an exported chat archive (Signal, Telegram, WhatsApp, …) into sources. First ask me: which platform and export format it is; whether to import the whole thread as one page, or split by day or by conversation; and any redaction rules (names, numbers, anything to drop). Then parse the archive from `inbox/` into dated `kb/sources/` page(s) with participants and date-range in frontmatter, applying the redactions before anything is written to disk. Treat the content as sensitive and keep it fully local. Verify on one export: show the parsed page and confirm the redactions held.
+```
 
 ---
 
 ## Outbound — get value out
+*Turn the synthesis into research, reports, events, and tasks.*
 
 ### deep-research · outbound · Connected
-- **Adds:** verified, cited external research folded into the store.
-- **Needs:** web search + fetch. **Secrets:** search API key *if* using a paid provider.
-- **Build prompt:** *Create a `research` skill that takes a question, fans out web searches, reads sources, adversarially verifies key claims, and writes a cited report to `kb/queries/` linked to the relevant topics.*
-- **Trust note:** outbound — phrase queries generically; **never** paste private source content into a search.
+- **Adds:** Verified, cited external research folded in.
+- **Needs:** web search + fetch · **Secrets:** a search API key if using a paid provider.
+- **Trust note:** phrase queries generically; never paste private source content into a search.
+
+```text
+Create a `research` skill, wired to my SCHEMA.md, that enriches the store with verified external research. First ask me: which search/fetch tool or provider to use (store any API key in `.env`); how deep to go (a quick scan vs many sources); and the citation style for the saved report. Then take a question, fan out web searches, read the best sources, adversarially verify key claims across independent sources before accepting them, and write a cited report to `kb/queries/` linked to the relevant topics and entities. This is outbound: phrase every query generically and never paste my private source content into a search — if answering well would require private detail, ask me first. Verify by running one research question and reviewing the cited report together.
+```
 
 ### digest · outbound* · Connected
-- **Adds:** a periodic "what changed / what needs action" summary.
-- **Needs:** none (reads `kb/log.md` + frontmatter). **Secrets:** none unless emailed out.
-- **Build prompt:** *Create a `digest` skill that summarises new sources, updated topics, and upcoming deadlines since the last run, and saves it to `kb/queries/`; optionally deliver via `gog` Gmail.*
-- **Trust note:** `local` if saved to disk; `outbound` only if you choose to send it.
+- **Adds:** A periodic "what changed / needs action" summary.
+- **Needs:** none (reads `kb/log.md` + frontmatter) · **Secrets:** none unless emailed out.
+- **Trust note:** local if saved to disk; outbound only if you choose to send it.
+
+```text
+Create a `digest` skill, wired to my SCHEMA.md, that produces a periodic "what changed and what needs action" summary. First ask me: the cadence (daily, weekly, on demand); what to include (new sources, updated topics, upcoming deadlines, open items); and whether to just save it or also deliver it (e.g. email via `gog`) — saving is local, sending makes it outbound. Then read `kb/log.md` and page frontmatter since the last run, write the digest to `kb/queries/`, and deliver it only if I asked. Key each digest by date so re-runs are idempotent. Verify by generating one digest and reviewing it.
+```
 
 ### calendar-push · outbound · Connected
-- **Adds:** document deadlines/actions become calendar events.
-- **Needs:** `gog` (Calendar). **Secrets:** none.
-- **Build prompt:** *Create a `push-deadlines` skill that scans frontmatter/`deadlines` fields and creates calendar events for them, idempotently (tag events so re-runs update rather than duplicate).*
+- **Adds:** Document deadlines become calendar events.
+- **Needs:** `gog` (Calendar) · **Secrets:** none.
 - **Trust note:** writes events only; sends nothing else.
 
+```text
+Create a `push-deadlines` skill, wired to my SCHEMA.md, that turns document deadlines into calendar events. First ask me: which calendar to write to; which frontmatter field holds deadlines (suggest `deadlines`); how much reminder lead time to set; and whether to include a link back to the source page in each event. Then scan pages for deadline/action fields and create events via `gog`, tagging each event with the source page ID so re-runs update the existing event rather than duplicating it. It writes events only and sends nothing else. Verify on one deadline: show the created event and confirm a second run updates rather than duplicates.
+```
+
 ### task-export · outbound · Connected
-- **Adds:** open items become reminders/tasks in your task manager.
-- **Needs:** a task CLI/MCP (Reminders, Todoist…). **Secrets:** API key for hosted task apps.
-- **Build prompt:** *Create an `export-tasks` skill that turns open action items in the KB into tasks in your task manager, idempotently keyed to the source page.*
+- **Adds:** Open items become reminders / tasks.
+- **Needs:** a task CLI/MCP (Reminders, Todoist…) · **Secrets:** API key for hosted task apps.
 - **Trust note:** push only the task title, not private detail.
 
+```text
+Create an `export-tasks` skill, wired to my SCHEMA.md, that pushes open action items into my task manager. First ask me: which task manager to use (Apple Reminders, Todoist, …; store any API key in `.env`); how an item qualifies as a task (e.g. an `open` checkbox, or an `actions` frontmatter field); and which list or project to add them to. Then turn qualifying items into tasks, each keyed to its source page so re-runs update rather than duplicate, pushing only the task title plus a link back — never the private detail behind it. Verify by exporting one item and confirming a second run doesn't duplicate it.
+```
+
 ### redacted-publish · outbound · Intelligent
-- **Adds:** a safe, public subset of the KB as a static site.
-- **Needs:** a static-site step + a redaction pass. **Secrets:** none.
-- **Build prompt:** *Create a `publish` skill that selects only pages tagged `public`, runs a redaction/lint pass to strip anything sensitive, and emits a static site — refusing to publish if the redaction check finds risk.*
-- **Trust note:** outbound — publishes; gated behind an explicit redaction check.
+- **Adds:** A safe, public subset as a static site.
+- **Needs:** a static-site step + a redaction pass · **Secrets:** none.
+- **Trust note:** gated behind an explicit redaction check.
+
+```text
+Create a `publish` skill, wired to my SCHEMA.md, that emits a safe public subset of the store as a static site. First ask me: which tag marks a page publishable (suggest `public`); the redaction rules (what patterns or fields must never ship — names, numbers, addresses); and where it deploys. Then select only pages carrying the public tag, run a redaction-and-lint pass that strips or masks anything matching the rules, and build a static site from the result — refusing to publish and reporting back if the check finds any residual risk. This is outbound and gated: nothing ships unless the redaction check passes. Verify on a couple of pages: show what would publish and what the redaction pass caught.
+```
 
 ### report-export · outbound* · Connected
-- **Adds:** a polished PDF/report from a topic or query.
-- **Needs:** `pandoc` (+ LaTeX/typst for PDF). **Secrets:** none.
-- **Build prompt:** *Create an `export-report` skill that renders a chosen topic/query page (and its linked sources) into a styled PDF in an `exports/` folder.*
-- **Trust note:** `local`; sharing the file is your call.
+- **Adds:** A polished PDF / report from a topic or query.
+- **Needs:** `pandoc` (+ LaTeX/typst for PDF) · **Secrets:** none.
+- **Trust note:** local; sharing the file is your call.
+
+```text
+Create an `export-report` skill, wired to my SCHEMA.md, that renders a topic or query into a polished document. First ask me: the output format (PDF via LaTeX/typst, or DOCX/HTML); which template or styling to use; and whether to inline the linked source pages or just reference them. Then render the chosen page and its linked sources with `pandoc` into a styled file under an `exports/` folder. It's local — generating the file leaves nothing; sharing it afterwards is my call. Verify by exporting one report and opening it together.
+```
 
 ---
 
 ## Interface — browse & ask
+*New ways to read, search, and talk to your store.*
 
 ### obsidian-vault · local · Connected
-- **Adds:** graph view, backlinks, and live frontmatter queries over `kb/`.
-- **Needs:** Obsidian + Dataview plugin. **Secrets:** none.
-- **Build prompt:** *Point an Obsidian vault at `kb/`; add a couple of Dataview queries (e.g. sources by category/date) and confirm the graph renders the `[[links]]`.*
+- **Adds:** Graph view, backlinks, live frontmatter queries.
+- **Needs:** Obsidian + Dataview plugin · **Secrets:** none.
 - **Trust note:** fully local.
 
+```text
+Set up an Obsidian vault over `kb/`, following my SCHEMA.md conventions. First ask me: which saved Dataview queries would be most useful (e.g. sources by category, recent changes, open deadlines); whether to add note templates matching the source and entity page shapes; and whether I want a starting dashboard note. Then point a vault at `kb/`, enable Dataview, add the agreed queries and templates, and confirm the graph view renders the `[[wiki-links]]` and the queries return rows. Fully local — Obsidian only reads the Markdown that's already there. Verify by opening the vault and walking the graph and one Dataview view together.
+```
+
 ### semantic-search · outbound* · Intelligent
-- **Adds:** fuzzy "where did I see…" retrieval beyond exact frontmatter queries.
-- **Needs:** an embeddings model + a small vector index. **Secrets:** embeddings API key (if hosted) — `EMBEDDINGS_API_KEY`.
-- **Build prompt:** *Create a `search` skill that embeds `kb/` pages into a local index and answers fuzzy queries by similarity, citing the pages — used alongside, not instead of, the exact index lookup.*
-- **Trust note:** prefer a local embedding model; if hosted, only page text you accept sending leaves.
+- **Adds:** Fuzzy "where did I see…" retrieval.
+- **Needs:** an embeddings model + a small vector index · **Secrets:** `EMBEDDINGS_API_KEY` if hosted.
+- **Trust note:** prefer a local model; if hosted, only page text you accept sending leaves.
+
+```text
+Create a `search` skill, wired to my SCHEMA.md, that adds fuzzy semantic retrieval alongside the exact index lookup. First ask me — this matters for privacy — whether to use a local embedding model (nothing leaves the machine) or a hosted one (which sends page text to an API; store `EMBEDDINGS_API_KEY` in `.env` and confirm before enabling); where to keep the index; and how many results to return. Then embed the `kb/` pages into a local vector index, refresh it incrementally as pages change, and answer fuzzy queries by similarity while always citing the pages — used to complement, never replace, the exact `kb/index.md` lookup. Verify with one fuzzy query and check the citations point to real pages.
+```
 
 ### static-site · local · Connected
-- **Adds:** the overview/wiki viewable at a URL (e.g. GitHub Pages).
-- **Needs:** a static-site generator or plain HTML + Pages. **Secrets:** none.
-- **Build prompt:** *Create a `site` step that renders selected `kb/` pages to a static site; combine with `redacted-publish` before anything goes public.*
-- **Trust note:** `local` to build; only `outbound` when actually deployed.
+- **Adds:** The wiki viewable at a URL.
+- **Needs:** a static-site generator or plain HTML + Pages · **Secrets:** none.
+- **Trust note:** local to build; outbound only when actually deployed.
+
+```text
+Create a `site` skill, wired to my SCHEMA.md, that renders selected `kb/` pages into a browsable static site. First ask me: which pages or categories to include; whether to use a static-site generator or emit plain HTML; the look (minimal is fine); and whether this stays local or will be deployed. Then render the chosen pages, preserving the `[[links]]` as navigation. Building is fully local; if I plan to deploy it publicly, route it through `redacted-publish` first and confirm. Verify by building once and opening the site locally.
+```
 
 ### chat-over-kb · local · Intelligent
-- **Adds:** conversational Q&A grounded in your store.
-- **Needs:** the agent itself (+ optional `semantic-search`). **Secrets:** none beyond the model.
-- **Build prompt:** *Create an `ask` skill that answers a natural-language question by retrieving the most relevant `kb/` pages (index first, semantic-search if present) and replying with citations, never asserting beyond the cited pages.*
-- **Trust note:** `local` retrieval; answers stay grounded.
+- **Adds:** Conversational Q&A grounded in your store.
+- **Needs:** the agent (+ optional semantic-search) · **Secrets:** none beyond the model.
+- **Trust note:** local retrieval; answers stay grounded.
+
+```text
+Create an `ask` skill, wired to my SCHEMA.md, that answers natural-language questions grounded in the store. First ask me: whether retrieval should use the exact `kb/index.md` lookup, `semantic-search` if it's installed, or both; and the citation style for answers. Then, for a question, retrieve the most relevant `kb/` pages, answer only from them, cite every page used, and say so plainly when the store doesn't contain the answer — never assert beyond the cited pages. Retrieval is local. Verify by asking a question whose answer is in the store and checking the citations.
+```
 
 ---
 
 ## Automation — keep it alive
+*The store feeds, maintains, and backs up itself.*
 
 ### auto-capture · local · Automated
-- **Adds:** durable lessons captured without anyone remembering to save them.
-- **Needs:** session-end / pre-compaction hooks. **Secrets:** none.
-- **Build prompt:** *Create hooks that, at session end and before compaction, append raw observations to `daily/YYYY-MM-DD.md` for later compilation.*
+- **Adds:** Lessons captured without anyone remembering to.
+- **Needs:** session-end / pre-compaction hooks · **Secrets:** none.
 - **Trust note:** local.
+
+```text
+Create auto-capture hooks, wired to my SCHEMA.md, that record durable lessons without anyone remembering to save them. First ask me: which moments to capture at (session end, before context compaction, or both); what kinds of thing to capture (decisions, corrections, preferences); and where to write them (suggest `daily/YYYY-MM-DD.md`). Then add hooks that append concise raw observations to the daily log, for later distillation by `compile-memory`. Fully local. Verify by triggering the hook once and showing the appended entry.
+```
 
 ### compile-memory · local · Automated
-- **Adds:** daily logs distilled into clean agent-memory facts on a schedule.
-- **Needs:** a scheduler + a `compile.py`. **Secrets:** none.
-- **Build prompt:** *Create a `compile.py` that reads `daily/` logs, extracts durable lessons, deduplicates against existing memory files, writes new one-fact files, and updates the memory `INDEX.md`. Runs unattended.*
-- **Trust note:** local. (Builds on `coleam00/claude-memory-compiler`.)
+- **Adds:** Daily logs distilled into memory facts.
+- **Needs:** a scheduler + a `compile.py` · **Secrets:** none.
+- **Trust note:** local. Builds on coleam00/claude-memory-compiler.
+
+```text
+Create a `compile.py`, wired to my SCHEMA.md, that distils the daily logs into clean agent-memory facts. First ask me: when it should run (e.g. nightly); how aggressively to deduplicate against existing facts; and whether new facts are written automatically or staged for my approval. Then read the `daily/` logs, extract durable lessons and preferences, deduplicate against the existing one-fact memory files, write new fact files (name/description/type + body), and update the memory `INDEX.md`. Idempotent — already-compiled days are skipped. Runs unattended and stays local. (Builds on the approach in coleam00/claude-memory-compiler.) Verify by compiling one day's log and reviewing the facts it produced.
+```
 
 ### scheduled-maintenance · local · Automated
-- **Adds:** the store ingests and lints itself on a timer.
-- **Needs:** cron/launchd. **Secrets:** none.
-- **Build prompt:** *Create a `maintain` job that runs `/ingest` over `inbox/` then `/lint`, on a schedule, and writes a short run summary to `kb/log.md`.*
+- **Adds:** Ingests & lints itself on a timer.
+- **Needs:** cron / launchd · **Secrets:** none.
 - **Trust note:** local.
+
+```text
+Create a `maintain` job, wired to my SCHEMA.md, that keeps the store healthy on a timer. First ask me: the schedule (e.g. nightly); which steps to run (ingest whatever's in `inbox/`, then `/lint`, and optionally `digest`); and where to write the run summary. Then set up the schedule (cron/launchd) to run the agreed steps and append a short summary to `kb/log.md` each time. Fully local. Verify by running the job once by hand and showing the summary line it wrote.
+```
 
 ### encrypted-backup · outbound · Automated
-- **Adds:** off-machine backup without trusting the host with plaintext.
-- **Needs:** `git` remote + `age`/`gpg`. **Secrets:** the encryption key/passphrase — `BACKUP_KEY` (kept in `.env`, never committed).
-- **Build prompt:** *Create a `backup` job that encrypts the store with `age`/`gpg` and pushes the ciphertext to a remote; verify a test decrypt.*
+- **Adds:** Off-machine backup; only ciphertext leaves.
+- **Needs:** a git remote + `age`/`gpg` · **Secrets:** `BACKUP_KEY` (in `.env`, never committed).
 - **Trust note:** outbound, but only ciphertext leaves.
 
+```text
+Create a `backup` job, wired to my SCHEMA.md, that backs the store up off-machine without trusting the host with plaintext. First ask me: whether to encrypt with `age` or `gpg`; which remote to push the ciphertext to; the schedule; and how the key is supplied (store the passphrase or key reference as `BACKUP_KEY` in the git-ignored `.env`, never committed). Then encrypt the store and push only the ciphertext to the remote, and verify a test decrypt on each run so a backup is never silently corrupt. It's outbound, but only encrypted bytes leave. Verify by running one backup and confirming the test decrypt succeeds.
+```
+
 ### watch-inbox · local · Automated
-- **Adds:** ingest fires the moment a source lands.
-- **Needs:** a filesystem watcher (`fswatch`/inotify). **Secrets:** none.
-- **Build prompt:** *Create a `watch-inbox` hook that triggers `/ingest` when a new file appears in `inbox/`; optionally chain `ingest-email` + `sync-drive` first.*
+- **Adds:** Ingest fires the moment a source lands.
+- **Needs:** a filesystem watcher (`fswatch` / inotify) · **Secrets:** none.
 - **Trust note:** local.
+
+```text
+Create a `watch-inbox` hook, wired to my SCHEMA.md, that ingests the moment a file lands. First ask me: which watcher to use (`fswatch`/inotify) or whether to fall back to a short poll; whether to first run `ingest-email` and `sync-drive` to gather remote sources; and a debounce window so a burst of files is handled as one batch. Then watch `inbox/` and trigger `/ingest` on new files, after the optional gather step. Fully local. Verify by dropping a file in `inbox/` and watching the ingest fire.
+```
 
 ---
 
 ## Intelligence — reason over the store
+*Agents that audit, reconcile, and clean up the synthesis.*
 
 ### sub-agents · local · Intelligent
-- **Adds:** task-focused agents that read only a defined slice of the store.
-- **Needs:** the agent platform's sub-agent mechanism. **Secrets:** none.
-- **Build prompt:** *Define specialised sub-agents (e.g. a filing assistant, a per-topic analyst) each scoped to specific `kb/` paths, so each works from exactly the right context.*
+- **Adds:** Task-focused agents over a slice of the store.
+- **Needs:** the agent platform's sub-agent mechanism · **Secrets:** none.
 - **Trust note:** local.
+
+```text
+Define specialised sub-agents, wired to my SCHEMA.md, each scoped to a slice of the store so it works from exactly the right context. First ask me: which roles I want (e.g. a filing assistant, a per-topic analyst, a figures/tax checker); the `kb/` paths each may read; and whether any may write or may only propose. Then create each sub-agent with its scope and a short brief, reading only its allotted paths. Fully local. Verify by giving one sub-agent a task in its domain and checking it stayed within scope.
+```
 
 ### contradiction-detector · local · Intelligent
-- **Adds:** catches two pages that assert different things about the same fact.
-- **Needs:** the agent (+ optional `semantic-search`). **Secrets:** none.
-- **Build prompt:** *Create a `check-contradictions` skill that scans for conflicting claims across pages (e.g. two values for the same field) and writes a report to `kb/queries/` for the user to resolve.*
+- **Adds:** Catches two pages that disagree on one fact.
+- **Needs:** the agent (+ optional semantic-search) · **Secrets:** none.
 - **Trust note:** local.
+
+```text
+Create a `check-contradictions` skill, wired to my SCHEMA.md, that finds pages disagreeing about the same fact. First ask me: which fields or kinds of claim matter most (e.g. dates, amounts, statuses); how broadly to compare (within a topic, or across the whole store); and where to write the report. Then scan for conflicting claims — two different values for the same field, or contradictory statements — and write a report to `kb/queries/` listing each conflict with its sources for me to resolve. It proposes, never auto-edits. Fully local. Verify by running it and reviewing the flagged conflicts.
+```
 
 ### source-reconciliation · local · Intelligent
-- **Adds:** cross-checks the synthesis against the raw sources it came from.
-- **Needs:** the agent. **Secrets:** none.
-- **Build prompt:** *Create a `reconcile` skill that re-reads the raw sources behind a topic page and flags any synthesis claim not supported by a cited source.*
+- **Adds:** Cross-checks the synthesis against its sources.
+- **Needs:** the agent · **Secrets:** none.
 - **Trust note:** local.
+
+```text
+Create a `reconcile` skill, wired to my SCHEMA.md, that checks the synthesis against the raw sources behind it. First ask me: which topic or page to reconcile (or all of them); and how strict to be (flag only unsupported claims, or also claims resting on weak or aged sources). Then re-read the raw sources cited by the chosen page and flag any synthesis claim not actually supported by a cited source, writing the findings to `kb/queries/`. It proposes corrections for me to approve. Fully local. Verify on one topic and review the flags.
+```
 
 ### entity-dedup · local · Intelligent
-- **Adds:** merges duplicate entity pages (same person/org, different names).
-- **Needs:** the agent. **Secrets:** none.
-- **Build prompt:** *Create an `entity-dedup` script that detects likely-duplicate entity pages and proposes merges — read-only by default, you approve.*
+- **Adds:** Merges duplicate entity pages.
+- **Needs:** the agent · **Secrets:** none.
 - **Trust note:** local.
 
+```text
+Create an `entity-dedup` script, wired to my SCHEMA.md, that finds and merges duplicate entity pages. First ask me: the matching signals to trust (near-identical names, shared identifiers, known aliases); and whether merges are proposed for my approval or applied automatically (default: propose). Then detect likely duplicates, and for each propose a merge that combines their facts and rewrites inbound `[[links]]` — applying only what I approve, read-only by default. Fully local. Verify by reviewing one proposed merge before and after.
+```
+
 ### frontmatter-lint · local · Automated
-- **Adds:** guarantees every page carries its required metadata.
-- **Needs:** a small validator script. **Secrets:** none.
-- **Build prompt:** *Create a `frontmatter-lint` script that validates required YAML fields on every `kb/` page and reports violations.*
+- **Adds:** Guarantees every page carries its metadata.
+- **Needs:** a small validator script · **Secrets:** none.
 - **Trust note:** local.
+
+```text
+Create a `frontmatter-lint` script, wired to my SCHEMA.md, that guarantees every page carries its required metadata. First ask me: the required fields per page type (defaulting to what SCHEMA.md specifies); and whether it should only report violations or also offer to fix the safe ones (e.g. fill a missing date from the file). Then validate the frontmatter on every `kb/` page and report violations grouped by file, applying fixes only where I allowed. Fully local. Verify by running it and reviewing the report.
+```
 
 ---
 
@@ -264,7 +359,8 @@ The ecosystem is open — a new extension just follows the contract:
    invent new storage.
 3. **Declare Needs + Secrets.** List tools, and any env var *names* (values live
    in the git-ignored `.env`, mirrored by name into `.env.example`).
-4. **Write the build prompt.** One paragraph telling an agent exactly what to
-   scaffold, including idempotency and the trust-boundary rule.
+4. **Write the build prompt.** A complete paragraph telling an agent exactly what
+   to scaffold *and* which preferences to ask the user for first, including
+   idempotency and the trust-boundary rule.
 5. **Add an entry here** under the right category and tier, using the template
-   above — and it's part of the catalog.
+   above, then run `tools/gen-catalogue.py` to sync the website.
