@@ -6,9 +6,9 @@
 > **You (the agent):** this file is your operating script. You are not writing a
 > report — you are **building a working system together with the user**, one
 > phase at a time, teaching as you go, so that by the end the system runs *and*
-> you both understand every part of it. The conceptual map lives in
-> `knowledge-base-architecture.html`; read it if present, but **this** file is
-> what you execute.
+> you both understand every part of it. The conceptual map is
+> `knowledge-base-architecture.html`; the full extension menu is `extensions.md`.
+> **This** file is what you execute.
 
 ---
 
@@ -18,23 +18,37 @@ You are co-building a **two-memory knowledge base**: a wiki-style store over the
 user's documents (the *matter*), plus an agent-memory folder of durable lessons
 and preferences (the *method*). Build it *with* the user, never *for* them.
 
-**The seven rules — follow them in every phase:**
+**The rules — follow them in every phase:**
 
 1. **Explain before you do.** Open each phase with 2–4 plain sentences: what
-   we're about to build and *why it matters*. This is a tutorial as much as a build.
-2. **One question at a time.** When you interview, ask a single question, wait,
-   reflect the answer back in your own words, then continue. Never dump a survey.
-3. **Confirm before every write.** Show the exact file path and a preview/diff of
-   what you'll create, and get a yes before writing. No silent changes.
-4. **Never invent.** Do not assume categories, entities, tools, or preferences
-   the user hasn't confirmed. Prefer the user's own words for names.
-5. **Local-first.** Nothing leaves the machine without explicit approval. Cloud
-   or web steps (email, research) are opt-in and called out as such.
-6. **Check understanding at each checkpoint.** Before moving on, give a one-line
-   recap and ask "does this make sense / want to adjust anything?" If the user is
-   lost, slow down and re-teach — comprehension is a deliverable.
-7. **Stay generic until they personalize.** This playbook ships anonymized. Every
-   concrete category, entity, and example comes from the *runner*, at runtime.
+   we're about to build and *why it matters*. A tutorial as much as a build.
+2. **One question at a time.** Ask, wait, reflect the answer back in your own
+   words, then continue. Never dump a survey.
+3. **Confirm before every write.** Show the file path and a preview/diff; get a
+   yes. No silent changes.
+4. **Never invent.** Don't assume categories, entities, tools, or preferences the
+   user hasn't confirmed. Prefer the user's own words for names.
+5. **Local-first.** Nothing leaves the machine without explicit approval. Cloud /
+   web steps are opt-in and named as such.
+6. **Check understanding at each checkpoint.** One-line recap + "make sense /
+   want to adjust?" If they're lost, slow down — comprehension is a deliverable.
+7. **Stay generic until they personalize.** Every concrete category, entity, and
+   example comes from the *runner*, at runtime.
+8. **Be idempotent and resumable.** Re-running a step must not double-write.
+   Record state so a stopped build can resume (see §C).
+9. **Credential hygiene.** **Never** write a secret value into any tracked file,
+   the manifest, or `CHANGELOG.log`. Secrets live only in a git-ignored `.env`.
+   If a *source* contains a secret, stop and flag it for removal.
+10. **Done means proven.** A phase isn't done until its *Done when* check passes
+    (see §D). State plainly when something failed — don't paper over it.
+
+**Anti-patterns — don't:**
+- dump walls of text instead of teaching in small beats;
+- invent categories/entities/tools to fill silence;
+- skip the confirm-before-write step "to save time";
+- over-engineer — build the simplest thing that meets the goal;
+- build skills or extensions the user didn't choose;
+- fuse inbound and outbound in one step, or commit a secret.
 
 **The per-phase loop** — run all six beats, in order, every phase:
 
@@ -44,200 +58,278 @@ TAILOR     → ask only what you need to shape this phase to the user
 BUILD      → create the artifact (after a confirmed diff)
 VERIFY     → look at the result together; prove it works
 CHECKPOINT → recap in one line; confirm understanding; get a go
-LOG        → append a CHANGELOG.log entry: what changed and why
+LOG        → append a CHANGELOG.log entry + update the manifest
 ```
 
-If at any point the user wants to stop, the system must be **left working** at
-the last completed phase — never half-written.
+If the user stops, the system must be **left working** at the last completed
+phase — never half-written.
 
 ---
 
-## B · Self-documenting mandate
+## B · Capabilities preflight (before Phase 0)
 
-The system explains itself, so neither of you needs this playbook to understand
-it later. You are responsible for keeping that true:
+Quietly check what you're working with, then adapt — don't assume:
 
-- **`SCHEMA.md`** is the constitution — anyone reading it can run the system.
-- **Every page carries YAML frontmatter** (`type`, `category`, `date`,
-  `related`, `tags`) and links related pages with `[[wiki-links]]`.
+- **File read/write** and **document reading** (PDFs, images). If you can't read a
+  format, note which extension covers it (e.g. `scan-ocr`).
+- **Persistent memory** for the *method* layer (or a local fallback folder).
+- **Installed tools** — probe for `git`, and any the user might want later
+  (`gog`, `rg`, `pandoc`, `ocrmypdf`, `rclone`, `whisper`). Missing is fine;
+  it just gates which extensions are available now.
+
+Record the findings; they inform what you offer in P1 and go in the manifest.
+
+---
+
+## C · Self-documenting & resumable
+
+The system explains itself, so neither of you needs this playbook later. You keep
+that true:
+
+- **`SCHEMA.md`** — the constitution; anyone reading it can run the system.
+- **Frontmatter on every page** (`type`, `category`, `date`, `related`, `tags`)
+  + `[[wiki-links]]`.
 - **Two logs, kept distinct:**
-  - **`CHANGELOG.log`** (repo root) — the append-only story of *building and
-    evolving* the system: each entry is a decision + the artifact it produced +
-    *why*. This is what the user re-reads to remember how the system came to be.
-  - **`kb/log.md`** — the routine *operations* log: one line per ingest/query/lint.
-- **`README.md`** — a plain-language overview you generate at the end: what this
-  system is, how to use it, and what was decided during the build.
+  - **`CHANGELOG.log`** — the append-only story of *building/evolving* the
+    system: decision + artifact + *why*. Written at every **LOG** beat.
+  - **`kb/log.md`** — routine *operations*: one line per ingest/query/lint.
+- **`amanu.yaml`** *(the manifest — machine-readable state)* at the built
+  system's root:
 
-Write to `CHANGELOG.log` at the **LOG** beat of *every* phase. Never batch it at
-the end — the log is the build narrating itself in real time.
+  ```yaml
+  schema_version: 1
+  tier: starter            # starter | connected | automated | intelligent
+  last_phase: P3           # resume point
+  depth: guided            # quick | guided | thorough
+  categories: [ ... ]
+  entities: [ ... ]
+  skills: [ ingest, query, lint ]
+  extensions: [ ]          # names from extensions.md
+  credentials: [ ]         # env-var NAMES only, never values
+  privacy: local-first
+  ```
+- **`README.md`** — a plain-language overview generated near the end.
+
+**Resume protocol.** On start, if `amanu.yaml` + `CHANGELOG.log` already exist,
+read them, summarise the state ("you're at `last_phase`, tier X, with these
+skills/extensions"), and **offer to resume there** instead of restarting. The
+manifest is the single source of truth for the system's shape.
 
 ---
 
-## C · The build journey — Phase 0 → Phase 10
+## D · Definition of done (per phase)
 
-Each phase below lists its six beats. Adapt wording to the user, but hit every beat.
+Every phase carries a **Done when:** line (below). Don't advance until it's true.
+Overall, the build is done when: an ingest and a query both run unaided, the
+manifest reflects reality, `CHANGELOG.log` tells the full story, and the user can
+explain the system back in their own words.
+
+---
+
+## E · Tailoring-depth dial
+
+Ask once, early: **how deep do you want to go?**
+
+- **quick** — minimal questions, sensible defaults, terse teaching. Get to a
+  working Starter fast.
+- **guided** *(default)* — the full interview, taught in small beats.
+- **thorough** — extra teaching, more options surfaced, more verification.
+
+Record it as `depth` in the manifest and scale your interview + explanations
+accordingly.
+
+---
+
+## F · The build journey — Phase 0 → Phase 10
+
+Each phase runs the six beats. Adapt wording; hit every beat; honour *Done when*.
 
 ### P0 · Orient & contract
-- **TEACH** — In plain words, describe the two-memory idea and the journey ahead
-  (these 11 phases). Set expectations: "we'll build a little, check it together,
-  and log it, each step."
-- **TAILOR** — Ask: where should the system live (which directory)? Confirm git is
-  available (`git --version`). Confirm they're ready to be interviewed.
-- **BUILD** — Create the working directory if needed and `CHANGELOG.log` with a
-  first entry (see §D).
-- **VERIFY** — Show the directory and the opening `CHANGELOG.log` entry.
-- **CHECKPOINT** — "Here's the plan and where we're building. Good to start?"
-- **LOG** — `P0 · initialized build · created CHANGELOG.log · chose <dir>`.
+- **TEACH** — the two-memory idea + the journey (11 phases). Set the rhythm:
+  "build a little, check it together, log it."
+- **TAILOR** — run the **preflight** (§B); ask where the system lives; confirm
+  `git`; set the **depth dial** (§E). If a manifest exists, offer to **resume**.
+- **BUILD** — create the directory (if needed), `CHANGELOG.log`, and a first
+  `amanu.yaml` (tier `starter`, `last_phase: P0`, depth).
+- **VERIFY** — show the directory, the opening log entry, and the manifest.
+- **CHECKPOINT** — "here's the plan and where we're building — good to start?"
+- **LOG** — `P0 · initialized · CHANGELOG.log + amanu.yaml · depth=<…>`.
+- **Done when:** directory, `CHANGELOG.log`, and `amanu.yaml` exist.
 
 ### P1 · Shape interview *(the tailoring core)*
-- **TEACH** — Explain that the answers here shape everything: the categories, the
-  schema, which skills and extensions you'll build. Nothing is locked — it all
-  co-evolves.
-- **TAILOR** — One question at a time, reflecting each back:
-  1. **Shape & scope** — what body of documents, roughly how many, solo or shared?
+- **TEACH** — these answers shape everything; nothing is locked, it all co-evolves.
+- **TAILOR** — one question at a time, reflecting each back:
+  1. **Shape & scope** — what body of documents, how many, solo or shared?
   2. **Area of focus** — name **4–8 categories** for `raw/` (their words).
-  3. **Goal** — what decisions/questions should this serve? What does "working in
-     3 months" look like?
+  3. **Goal** — what decisions/questions should this serve? "working in 3 months"?
   4. **Entities** — who/what recurs (people, orgs, accounts) deserving a page?
-  5. **Skills** — which one-word workflows? Defaults `/ingest` `/query` `/lint`;
-     offer `/setup` `/digest` `/ingest-email`. **Record the chosen set.**
-  6. **Extensions** — which to wire? Obsidian vault · `gog` (Gmail/Drive/Calendar)
-     · deep-research · automation (hooks + compile loop). **Record the chosen set.**
-  7. **Privacy** — confirm local-only with explicit egress, or note exceptions.
-- **BUILD** — Write nothing yet except notes; produce a short, confirmed summary
-  of all answers.
-- **VERIFY** — Read the summary back; let the user correct it.
-- **CHECKPOINT** — "This is the shape of your system — accurate?"
-- **LOG** — `P1 · captured shape · categories=[…] · skills=[…] · extensions=[…]`.
+  5. **Skills** — defaults `/ingest` `/query` `/lint`; offer `/setup` `/digest`.
+  6. **Extensions** — **walk `extensions.md` by category & tier**; offer only
+     what the preflight supports now; note Secrets each will need.
+  7. **Privacy** — confirm local-first + explicit egress, or note exceptions.
+- **BUILD** — write a confirmed summary; update `amanu.yaml`
+  (`categories`/`entities`/`skills`/`extensions`/`credentials`).
+- **VERIFY** — read the manifest summary back; let them correct it.
+- **CHECKPOINT** — "this is the shape of your system — accurate?"
+- **LOG** — `P1 · shape · categories=[…] skills=[…] extensions=[…]`.
+- **Done when:** `amanu.yaml` records the full chosen shape.
 
-### P2 · Scaffold
-- **TEACH** — Folders are the whole database; explain the three layers
-  (`raw/` sources, `kb/` synthesis, `SCHEMA.md` constitution) and `inbox/`.
-- **TAILOR** — Confirm the category folder names from P1.
-- **BUILD** — Create `inbox/`, `raw/<category>/…`, `kb/{entities,topics,sources,queries}`,
-  `kb/index.md`, a stub `kb/overview.md`; run `git init`.
-- **VERIFY** — Show the tree; confirm git is tracking it.
-- **CHECKPOINT** — Recap the layout; "make sense where things will live?"
-- **LOG** — `P2 · scaffolded folders + git init`.
+### P2 · Scaffold *(+ credentials hygiene)*
+- **TEACH** — folders are the whole database (three layers + `inbox/`); and we set
+  up secret-safety *before* anything sensitive exists.
+- **TAILOR** — confirm category folder names; confirm whether any chosen
+  extension needs secrets.
+- **BUILD** — **write `.gitignore` first** (`.env`, `*.key`, `secrets/`, caches,
+  `.DS_Store`, plus the store's own ignores); create `inbox/`,
+  `raw/<category>/…`, `kb/{entities,topics,sources,queries}`, `kb/index.md`,
+  stub `kb/overview.md`; `git init`. If extensions need secrets, generate a
+  committed **`.env.example`** (var **names** + comments, no values) and a
+  git-ignored **`.env`** for the user to fill — but only after confirming `.env`
+  is ignored.
+- **VERIFY** — show the tree; show that `git status` does **not** list `.env`.
+- **CHECKPOINT** — "structure's in place and secrets are fenced off — good?"
+- **LOG** — `P2 · scaffold + .gitignore (+ .env.example if needed)`.
+- **Done when:** tree exists, `git init` done, `.env` is ignored (if present).
 
 ### P3 · SCHEMA.md *(the constitution)*
-- **TEACH** — This single file is what makes the agent a consistent librarian; it
-  is the product. Walk through what it must contain.
-- **TAILOR** — Confirm the frontmatter fields and naming convention to use.
-- **BUILD** — Write a tailored `SCHEMA.md`: the three layers + folder map; file
-  naming; the frontmatter spec; the **ingest / query / lint** recipes (step by
-  step); the privacy rule. Make it self-describing.
-- **VERIFY** — Read the key sections aloud; confirm they match the user's intent.
-- **CHECKPOINT** — "This is the rulebook everything follows — happy with it?"
-- **LOG** — `P3 · wrote SCHEMA.md (tailored constitution)`.
+- **TEACH** — this one file makes the agent a consistent librarian; it's the
+  product.
+- **TAILOR** — confirm the frontmatter fields and naming convention.
+- **BUILD** — write a tailored `SCHEMA.md`: layers + folder map; file naming; the
+  frontmatter spec; the **ingest / query / lint** recipes; the privacy +
+  credential rules. Self-describing.
+- **VERIFY** — read the key sections; confirm they match intent.
+- **CHECKPOINT** — "this is the rulebook everything follows — happy?"
+- **LOG** — `P3 · wrote SCHEMA.md`.
+- **Done when:** `SCHEMA.md` covers layers, naming, frontmatter, the 3 recipes.
 
 ### P4 · Seed agent memory
-- **TEACH** — Explain the *method* memory: durable preferences/lessons, one fact
-  per file, recalled when relevant — separate from the document store.
-- **TAILOR** — Ask for 2–4 standing preferences (e.g. summary style, "ask before
+- **TEACH** — the *method* memory: durable preferences, one fact per file,
+  recalled when relevant — separate from the document store.
+- **TAILOR** — ask for 2–4 standing preferences (summary style, "ask before
   inferring", what to always flag).
-- **BUILD** — Create the memory folder, one fact file each
+- **BUILD** — create the memory folder, one fact file each
   (`name`/`description`/`type` + body), and its `INDEX.md`.
-- **VERIFY** — Show the facts and the index line for each.
-- **CHECKPOINT** — "These shape *how* I work for you — anything to add?"
-- **LOG** — `P4 · seeded N agent-memory facts`.
+- **VERIFY** — show the facts and each index line.
+- **CHECKPOINT** — "these shape *how* I work for you — anything to add?"
+- **LOG** — `P4 · seeded N memory facts`.
+- **Done when:** ≥2 fact files + memory `INDEX.md` exist.
 
 ### P5 · First real ingest *(prove the loop)*
-- **TEACH** — Now we run the real thing on one real document, narrating each step
-  so the user sees the pipeline work.
-- **TAILOR** — Ask the user to drop **one** real document in `inbox/`.
-- **BUILD** — Run the ingest recipe live: read & classify → surface anything
+- **TEACH** — run the real pipeline on one real document, narrating each step.
+- **TAILOR** — ask the user to drop **one** real document in `inbox/`.
+- **BUILD** — run the ingest recipe live: read & classify → surface anything
   notable → rename+move into `raw/<category>/` → write the `kb/sources/` page →
-  roll up into the relevant entity/topic pages → append `kb/log.md` → update
-  `kb/index.md`. Narrate and confirm at each write.
-- **VERIFY** — Open the resulting source page and the updated index together.
-- **CHECKPOINT** — "That's one full ingest. Clear how it flowed?"
-- **LOG** — `P5 · first ingest: <source> → sources/entities/topics updated`.
+  roll up into entity/topic pages → append `kb/log.md` → update `kb/index.md`.
+  Confirm at each write.
+- **VERIFY** — open the source page and the updated index together.
+- **CHECKPOINT** — "that's one full ingest — clear how it flowed?"
+- **LOG** — `P5 · first ingest: <source>`.
+- **Done when:** the source is in `raw/`, has a `kb/sources/` page, and the index
+  links it.
 
 ### P6 · First real query *(prove retrieval)*
-- **TEACH** — Show that the synthesis — not re-reading raw files — answers questions.
-- **TAILOR** — Ask a real question the new source can answer.
-- **BUILD** — Answer by reading `kb/index.md` then the relevant pages; cite them;
-  offer to save the answer to `kb/queries/`.
-- **VERIFY** — Confirm the answer is grounded in cited pages.
-- **CHECKPOINT** — "Retrieval works end to end — see how it used the wiki?"
-- **LOG** — `P6 · first query answered + (optionally) saved`.
+- **TEACH** — the synthesis, not re-reading raw files, answers questions.
+- **TAILOR** — ask a real question the new source can answer.
+- **BUILD** — answer by reading `kb/index.md` then the relevant pages; cite them;
+  offer to save to `kb/queries/`.
+- **VERIFY** — confirm the answer is grounded in cited pages.
+- **CHECKPOINT** — "retrieval works end to end — see how it used the wiki?"
+- **LOG** — `P6 · first query`.
+- **Done when:** a cited answer is produced from the synthesis.
 
 ### P7 · Build the chosen skills
-- **TEACH** — Skills turn the recipes into one-word commands; we build only the
-  ones you chose in P1.
-- **TAILOR** — Reconfirm the skill list; pick the next one.
-- **BUILD** — For each chosen skill, scaffold it from its build prompt, wired to
-  `SCHEMA.md` (`/ingest`, `/query`, `/lint`, and any of `/setup` `/digest`
-  `/ingest-email`). Confirm each file before writing.
-- **VERIFY** — Dry-run at least `/ingest` and `/query` to show they work.
-- **CHECKPOINT** — "Your core commands exist and run — good?"
-- **LOG** — `P7 · built skills: [...]`.
+- **TEACH** — skills turn the recipes into one-word commands; build only what was
+  chosen.
+- **TAILOR** — reconfirm the skill list; pick the next one.
+- **BUILD** — scaffold each chosen skill from its build prompt, wired to
+  `SCHEMA.md`. Confirm each file.
+- **VERIFY** — dry-run at least `/ingest` and `/query` (smoke test).
+- **CHECKPOINT** — "your core commands exist and run — good?"
+- **LOG** — `P7 · built skills: […]`.
+- **Done when:** each chosen skill exists and its smoke test passes.
 
 ### P8 · Wire the chosen extensions
-- **TEACH** — Extensions attach at the edges; explain the **inbound/outbound
-  trust boundary** (ingestion only pulls; research reaches out — never mix).
-- **TAILOR** — Take only the extensions chosen in P1, one at a time.
-- **BUILD** — As applicable:
-  - **`gog` / `/ingest-email`** — drain a Gmail label: `ingest-pending` →
-    body to `kb/sources/`, attachments to `inbox/`, run `/ingest`, relabel
-    `ingest-done`. Pull-only; idempotent.
-  - **Obsidian** — point a vault at `kb/`; confirm graph view + a Dataview query.
-  - **deep-research** — add the research workflow that saves cited reports to
-    `kb/queries/` (generic queries only; never send private content out).
-  - **automation** — session hooks for auto-capture + a scheduled `compile.py`
-    (see the architecture doc's automation section).
-- **VERIFY** — Demonstrate each wired extension once.
-- **CHECKPOINT** — "Each integration you wanted is proven — anything missing?"
-- **LOG** — `P8 · wired extensions: [...]`.
+- **TEACH** — extensions attach at the edges; restate the **trust boundary**
+  (inbound pulls; outbound is generic/redacted; never fuse them).
+- **TAILOR** — take only the extensions chosen in P1, one at a time; for each,
+  confirm its **Needs** and **Secrets** (ensure the var names are in
+  `.env.example` and the user has filled `.env`).
+- **BUILD** — scaffold each from its **`extensions.md` build prompt**, wired to
+  `SCHEMA.md`; load any secrets from `.env`. Raise `tier` in the manifest as
+  inbound/outbound/automation/intelligence extensions come online.
+- **VERIFY** — demonstrate each wired extension once (idempotent re-run).
+- **CHECKPOINT** — "each integration you wanted is proven — anything missing?"
+- **LOG** — `P8 · wired extensions: […] · tier=<…>`.
+- **Done when:** each chosen extension runs once successfully; manifest `tier`
+  and `extensions` updated; no secret values in any tracked file.
 
 ### P9 · Lint + self-document
-- **TEACH** — A health pass keeps the store honest; then we make the system
-  explain itself to your future self.
-- **TAILOR** — Confirm scope of the lint and that a `README` is wanted.
-- **BUILD** — Run the lint recipe (contradictions, orphans, staleness, missing
-  links, gaps) → dated report in `kb/queries/`. Generate `README.md`: what this
-  system is, how to use the skills, and the decisions made (summarized from
-  `CHANGELOG.log`).
-- **VERIFY** — Review the lint report and the README together.
-- **CHECKPOINT** — "The system now documents itself — does the README read right?"
-- **LOG** — `P9 · lint pass + generated README`.
+- **TEACH** — a health pass keeps the store honest; then the system explains
+  itself to your future self.
+- **TAILOR** — confirm lint scope and that a `README` is wanted.
+- **BUILD** — run the lint recipe (contradictions, orphans, staleness, missing
+  links, gaps) → dated report in `kb/queries/`. Generate `README.md` (what it is,
+  how to use the skills, decisions — summarised from `CHANGELOG.log`).
+- **VERIFY** — review the lint report and the README together.
+- **CHECKPOINT** — "the system documents itself now — does the README read right?"
+- **LOG** — `P9 · lint + README`.
+- **Done when:** a lint report exists and `README.md` describes the live system.
 
 ### P10 · Handoff
-- **TEACH** — Recap the whole system in plain words: the two memories, the
-  folders, the skills, the extensions.
-- **TAILOR** — Ask what they want to do first on their own.
-- **BUILD** — Nothing new; optionally a first `git commit` of the built system.
-- **VERIFY** — Walk `CHANGELOG.log` top to bottom together — the build's own story.
-- **CHECKPOINT** — Confirm they can run an ingest and a query unaided.
-- **LOG** — `P10 · handoff complete · system live`.
+- **TEACH** — recap the whole system in plain words: two memories, folders,
+  skills, extensions, tier.
+- **TAILOR** — ask what they want to do first on their own.
+- **BUILD** — optionally a first `git commit` of the built system; set
+  `last_phase: P10` in the manifest.
+- **VERIFY** — walk `CHANGELOG.log` top to bottom together.
+- **CHECKPOINT** — confirm they can run an ingest and a query unaided.
+- **LOG** — `P10 · handoff · system live · tier=<…>`.
+- **Done when:** the overall definition of done (§D) holds.
 
 ---
 
-## D · `CHANGELOG.log` format
+## G · Maturity tiers
 
-Append-only. One entry per LOG beat. Keep it terse but always include the *why*.
+The system grows in stages; the manifest tracks where it is:
+
+1. **Starter** — core only (ingest, query, lint). Offline. The default delivery.
+2. **Connected** — inbound feeds + outbound consumption (email, drive, research…).
+3. **Automated** — it maintains itself (hooks, compile loop, cron, backup).
+4. **Intelligent** — it reasons over itself (sub-agents, reconciliation, search).
+
+Adding an extension raises the tier. Don't push a user up a tier they didn't ask
+for — offer the next rung, let them choose.
+
+---
+
+## H · `CHANGELOG.log` format
+
+Append-only. One entry per LOG beat. Terse, but always the *why*.
 
 ```
 [2026-01-15 14:32] P2 · scaffold
-  built:   inbox/, raw/{contracts,receipts,correspondence}/, kb/{entities,topics,sources,queries}/, git init
-  why:     three-layer store — immutable raw, owned synthesis, schema constitution
+  built:   .gitignore, inbox/, raw/{contracts,receipts}/, kb/{…}, git init
+  why:     three-layer store; secrets fenced before any sensitive data exists
   next:    P3 — write the tailored SCHEMA.md
 ```
 
-Rules: newest at the bottom; never edit past entries; if a decision is reversed
-later, add a *new* entry explaining the reversal rather than rewriting history.
+Rules: newest at the bottom; never edit past entries; reverse a decision with a
+*new* entry, not by rewriting history. Update `amanu.yaml` alongside each entry.
 
 ---
 
-## E · Quick-start
+## I · Quick-start
 
-Give your agent exactly this:
+Give your agent one of these:
 
-> **"Read `build-with-agent.md` and start the guided build with me at Phase 0.
-> Go one phase at a time, explain before you do, confirm before you write, and
-> keep the `CHANGELOG.log`."**
+> **Fresh build —** *"Read `build-with-agent.md` and start the guided build with
+> me at Phase 0. One phase at a time, explain before you do, confirm before you
+> write, keep the `CHANGELOG.log`."*
 
-That's it. The agent drives; you steer. By Phase 10 you have a working,
-self-documenting knowledge base — and you understand every part because you
+> **Resume —** *"Read `build-with-agent.md` and `amanu.yaml`, tell me where we
+> left off, and continue from `last_phase`."*
+
+The agent drives; you steer. By Phase 10 you have a working, self-documenting
+knowledge base at the tier you chose — and you understand every part because you
 built it together.

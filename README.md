@@ -23,9 +23,14 @@ If a user has pointed you at this repository:
 
 1. Read **[`build-with-agent.md`](build-with-agent.md)** — it is your operating
    script, not background reading.
-2. Start the guided, eleven-phase **co-build** with the user at **Phase 0**.
+2. Run the **capabilities preflight**, then start the guided, eleven-phase
+   **co-build** with the user at **Phase 0**. If an `amanu.yaml` manifest already
+   exists, offer to **resume** instead of restarting.
 3. Work the loop every phase: **explain before doing → ask to tailor → build
    after a confirmed diff → verify together → checkpoint → log to `CHANGELOG.log`**.
+4. Offer extensions from **[`extensions.md`](extensions.md)** by category and
+   tier; build only what the user picks, respecting each one's trust class and
+   keeping secrets in a git-ignored `.env`.
 
 The one-liner a user can give you:
 
@@ -45,8 +50,17 @@ the raw plan? It's all in [`build-with-agent.md`](build-with-agent.md).
 | File | Purpose |
 |------|---------|
 | `build-with-agent.md` | The agent-driven build playbook — the executable spec. |
+| `extensions.md` | The extension catalog — ~25 plug-ins across 5 categories, each with a build prompt, trust class, and tier. |
 | `knowledge-base-architecture.html` | Visual blueprint & overview for humans. |
 | `index.html` | Redirect so GitHub Pages opens the overview. |
+
+## Grows in tiers
+
+The build delivers a **Starter** system (ingest · query · lint, fully offline);
+extensions raise it through **Connected** (inbound feeds + outbound consumption)
+→ **Automated** (hooks, compile loop, cron, backup) → **Intelligent** (sub-agents,
+semantic search, reconciliation). A machine-readable `amanu.yaml` manifest tracks
+the shape and makes the build resumable.
 
 ## Privacy
 

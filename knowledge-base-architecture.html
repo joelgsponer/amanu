@@ -213,6 +213,30 @@
   .twolog .l.ops .fn{color:var(--slate)}
   .twolog .l p{margin:0;font-size:13px;color:var(--ink-soft)}
 
+  /* extension ecosystem: category grid, trust legend, tier ladder */
+  .catgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:20px 0}
+  .catcard{border:1px solid var(--rule-strong);border-radius:11px;background:var(--paper-2);padding:14px 15px}
+  .catcard h4{margin:0 0 6px;font-size:14px;font-weight:650}
+  .catcard .ex{font-size:12px;color:var(--ink-soft);line-height:1.5}
+  .catcard .tc{display:block;font-family:var(--mono);font-size:10px;margin-top:9px;color:var(--ink-faint);letter-spacing:.04em}
+
+  .trustlegend{display:flex;flex-wrap:wrap;gap:10px;margin:18px 0}
+  .trustlegend .t{border:1px solid var(--rule-strong);border-radius:8px;padding:9px 13px;background:var(--paper-2);font-size:13px;color:var(--ink-soft)}
+  .trustlegend .t b{font-family:var(--mono);font-size:11.5px}
+  .trustlegend .in b{color:var(--teal)} .trustlegend .out b{color:var(--indigo)} .trustlegend .loc b{color:var(--slate)}
+
+  .tierladder{display:grid;grid-template-columns:repeat(4,1fr);margin:20px 0;border:1px solid var(--rule-strong);border-radius:12px;overflow:hidden}
+  .tierladder .tier{padding:15px 16px;border-right:1px solid var(--rule);background:var(--paper-2)}
+  .tierladder .tier:last-child{border-right:none}
+  .tierladder .tier .n{font-family:var(--mono);font-size:11px;color:var(--indigo);font-weight:700}
+  .tierladder .tier h4{margin:5px 0 3px;font-size:14.5px;font-weight:650}
+  .tierladder .tier p{margin:0;font-size:12px;color:var(--ink-soft);line-height:1.45}
+
+  .catalog-cta{display:flex;align-items:center;gap:12px;border:1px solid var(--rule-strong);border-left:3px solid var(--indigo);border-radius:0 10px 10px 0;background:var(--paper-2);padding:14px 18px;margin:20px 0;font-size:14px}
+  .catalog-cta a{font-weight:650}
+
+  @media(max-width:880px){.catgrid{grid-template-columns:1fr 1fr}.tierladder{grid-template-columns:1fr 1fr}}
+
   footer{border-top:1px solid var(--rule-strong);background:var(--paper-2);padding:30px 0 50px}
   footer p{font-size:13px;color:var(--ink-faint);font-family:var(--mono);margin:0;max-width:none}
 
@@ -544,81 +568,91 @@ Related: <span class="l">[[ingest-workflow]]</span></pre>
       </div>
       <p>Plus the artifacts that explain themselves: <code>SCHEMA.md</code> (anyone who reads it can run the system), frontmatter on every page, and a generated <code>README.md</code> summarising what was built and decided.</p>
 
+      <h3>Robust by construction</h3>
+      <p>The playbook is built to survive real sessions, not just a happy path:</p>
+      <ul class="clean">
+        <li><strong>Capabilities preflight</strong> — before Phase 0 the agent probes what it has (file access, document reading, installed CLIs) and offers only what's actually available.</li>
+        <li><strong>A machine-readable manifest</strong> — <code>amanu.yaml</code> records the system's shape (tier, categories, skills, extensions, <code>last_phase</code>), so the build is <strong>resumable</strong>: stop anytime and pick up where you left off.</li>
+        <li><strong>A tailoring-depth dial</strong> — choose <em>quick</em>, <em>guided</em>, or <em>thorough</em>; the interview and teaching scale to match.</li>
+        <li><strong>Definition-of-done</strong> — every phase has a concrete "done when" check; nothing advances on a half-built step.</li>
+        <li><strong>Credential hygiene</strong> — scaffolding writes <code>.gitignore</code> first, then a prepopulated <code>.env.example</code> (var names, no values) + a git-ignored <code>.env</code>; secrets never touch a tracked file, the manifest, or the log.</li>
+      </ul>
+
       <div class="note privacy"><b>Generic until you personalise it.</b> The playbook ships anonymized and tool-agnostic; everything specific — your categories, entities, and examples — comes from <em>you</em>, at build time. Nothing leaves your machine without an explicit yes.</div>
     </section>
 
     <!-- 9 -->
     <section id="extend">
-      <h2><span class="num">09</span>Extending the system</h2>
-      <p class="sec-sub">The core is just files and workflows, so new capabilities attach at the edges without disturbing it. Four are especially high-leverage — two move documents in and knowledge out, two upgrade how you connect and consume the store.</p>
+      <h2><span class="num">09</span>The extension ecosystem</h2>
+      <p class="sec-sub">The core is just files and workflows, so new capabilities attach at the edges without disturbing it. They aren't a fixed list — they're a <strong>catalog</strong> that grows, each entry following one small contract so any extension's output is another's input.</p>
 
-      <div class="ext">
-        <div class="extcard mail">
-          <div class="ic">@</div>
-          <span class="tag">Extension · inbound</span>
-          <h4>Email ingestion &amp; attachment processing</h4>
-          <p>Turn a mailbox into an automatic source feed, so documents file themselves.</p>
-          <ol>
-            <li>Connect a mail source via a connector (an email tool/plugin, or an IMAP poll). Watch one dedicated label or folder, not the whole inbox.</li>
-            <li>For each new message: capture sender, subject, date and body; save every attachment into <code>inbox/</code>.</li>
-            <li>Run the standard <strong>ingest</strong> workflow on each attachment. Write the message body itself as a source page too, when it carries information.</li>
-            <li>Process by type: PDFs read natively, images via OCR, spreadsheets/exports parsed into tables.</li>
-            <li>Mark the message processed (label/archive) and record its ID, so re-runs never double-ingest.</li>
-          </ol>
-        </div>
-        <div class="extcard research">
-          <div class="ic">⌕</div>
-          <span class="tag">Extension · outbound</span>
-          <h4>Deep-research integration</h4>
-          <p>Let the agent enrich the store with external context — verified and cited.</p>
-          <ol>
-            <li>Add a research workflow: take a question, fan out parallel web searches, fetch and read the best sources.</li>
-            <li>Adversarially verify key claims across independent sources before accepting them.</li>
-            <li>Synthesise a cited report and save it to <code>queries/</code> with frontmatter, linked to the relevant entities and topics.</li>
-            <li>Use it to answer "what are my options for X" questions and fold the conclusion back into the knowledge base.</li>
-          </ol>
-        </div>
+      <h3>The contract</h3>
+      <p>Every extension is some mix of a <strong>Skill</strong> (a command), a <strong>Hook</strong> (an automatic trigger), and a <strong>Tool</strong> (an external CLI like <code>gog</code> or <code>rclone</code>). It touches the store <em>only</em> through the SCHEMA conventions — <code>inbox/</code>→ingest, the <code>kb/</code> pages, frontmatter, <code>[[links]]</code>, the ops log — never its own storage. And it declares a <strong>trust class</strong>:</p>
+      <div class="trustlegend">
+        <span class="t in"><b>inbound</b> — pulls data in, never sends</span>
+        <span class="t out"><b>outbound</b> — sends out; generic / redacted only</span>
+        <span class="t loc"><b>local</b> — no network at all</span>
       </div>
 
+      <h3>Five categories</h3>
+      <div class="catgrid">
+        <div class="catcard"><h4>Inbound</h4><p class="ex">Feed the store: email, drive-sync, scan-OCR, web-clipper, audio→transcript, calendar, CSV/financial.</p><span class="tc">inbound</span></div>
+        <div class="catcard"><h4>Outbound</h4><p class="ex">Get value out: deep-research, digest, calendar-push, task export, redacted publish, PDF report.</p><span class="tc">outbound</span></div>
+        <div class="catcard"><h4>Interface</h4><p class="ex">Browse &amp; ask: Obsidian vault, semantic search, static site, chat-over-KB.</p><span class="tc">local / outbound</span></div>
+        <div class="catcard"><h4>Automation</h4><p class="ex">Keep it alive: auto-capture hooks, compile loop, scheduled maintenance, encrypted backup, watch-inbox.</p><span class="tc">local / outbound</span></div>
+        <div class="catcard"><h4>Intelligence</h4><p class="ex">Reason over it: sub-agents, contradiction &amp; reconciliation checks, entity-dedup, frontmatter-lint.</p><span class="tc">local</span></div>
+      </div>
+
+      <div class="catalog-cta">📖&nbsp; The full catalog — ~25 extensions, each with a build prompt, trust class, and the secrets it needs — lives in <a class="inl" href="extensions.md">extensions.md</a>. The build agent reads it to offer you a menu.</div>
+
+      <h3>Maturity tiers</h3>
+      <p>The catalog maps onto a growth path, so you adopt capability in stages — the build delivers <strong>Starter</strong> by default, and every extension you add raises the tier your manifest records.</p>
+      <div class="tierladder">
+        <div class="tier"><span class="n">TIER 1</span><h4>Starter</h4><p>Core only — ingest, query, lint. Offline.</p></div>
+        <div class="tier"><span class="n">TIER 2</span><h4>Connected</h4><p>Inbound feeds + outbound consumption.</p></div>
+        <div class="tier"><span class="n">TIER 3</span><h4>Automated</h4><p>Maintains itself — hooks, compile, cron, backup.</p></div>
+        <div class="tier"><span class="n">TIER 4</span><h4>Intelligent</h4><p>Reasons over itself — sub-agents, search, reconciliation.</p></div>
+      </div>
+
+      <h3>Three exemplars — one per trust class</h3>
       <div class="ext">
         <div class="extcard gog">
           <div class="ic">G</div>
-          <span class="tag">Extension · the concrete engine</span>
+          <span class="tag">inbound · the concrete engine</span>
           <h4>Google Workspace via <code>gog</code></h4>
-          <p>The generic "mail source" above, made real. <a class="inl" href="https://github.com/googleworkspace/cli">gog</a> (a.k.a. <code>gogcli</code>) is a fast, JSON-first CLI for Gmail, Drive, Calendar, Docs and Sheets — OAuth sign-in, multi-account, and shipped as an agent skill, so it scripts straight into your workflows.</p>
+          <p><a class="inl" href="https://github.com/googleworkspace/cli">gog</a> (a.k.a. <code>gogcli</code>) is a fast, JSON-first CLI for Gmail, Drive, Calendar, Docs and Sheets — OAuth sign-in, no API keys to manage — so it scripts straight into your inbound feeds.</p>
           <ol>
-            <li><strong>Gmail →</strong> poll one label; pull message bodies and save attachments into <code>inbox/</code>, then run <strong>ingest</strong>.</li>
-            <li><strong>Drive →</strong> mirror a folder as a source feed — new files in Drive become new sources automatically.</li>
-            <li><strong>Calendar ←</strong> push a document's deadlines and required actions out as events; or pull events in as dated context.</li>
-            <li><strong>Docs / Sheets →</strong> read structured exports directly, no manual download step.</li>
-            <li>JSON output means every result is parseable — record processed IDs to stay idempotent.</li>
+            <li><strong>Gmail →</strong> drain a label; bodies + attachments into <code>inbox/</code>, then ingest.</li>
+            <li><strong>Drive →</strong> mirror a folder as a source feed.</li>
+            <li><strong>Calendar →</strong> push document deadlines out as events.</li>
           </ol>
-          <p style="font-size:13px;margin:4px 0 0;color:var(--ink-faint)">→ ready-made build prompt for the Gmail flow in <a class="inl" href="#setup">§10 · /ingest-email</a>.</p>
+          <p style="font-size:13px;margin:4px 0 0;color:var(--ink-faint)">→ build prompt: <a class="inl" href="#setup">§10 · /ingest-email</a> · catalog: <a class="inl" href="extensions.md">email</a>.</p>
+        </div>
+        <div class="extcard research">
+          <div class="ic">⌕</div>
+          <span class="tag">outbound · verified &amp; cited</span>
+          <h4>Deep research</h4>
+          <p>Enrich the store with external context the right way: fan out web searches, read sources, adversarially verify, and save a cited report to <code>queries/</code>.</p>
+          <ol>
+            <li>Outbound — questions go to the open web.</li>
+            <li>Phrase them <strong>generically</strong>; never paste private source content into a search.</li>
+            <li>The conclusion folds back into the KB as a linked, cited page.</li>
+          </ol>
         </div>
         <div class="extcard obsidian">
           <div class="ic">◆</div>
-          <span class="tag">Extension · the human layer</span>
-          <h4>Browse it as an Obsidian vault</h4>
-          <p>The store was <em>designed</em> for this: open <code>kb/</code> as a vault and the conventions light up. The agent writes the files; you read, navigate, and query them.</p>
+          <span class="tag">local · the human layer</span>
+          <h4>Browse as an Obsidian vault</h4>
+          <p>The store was <em>designed</em> for this: point a vault at <code>kb/</code> and the conventions light up — fully local, zero lock-in.</p>
           <ol>
-            <li><strong>Graph view</strong> renders the <code>[[wiki-links]]</code> as a navigable map of entities, topics and sources.</li>
-            <li><strong>Dataview / Bases</strong> run live queries over the YAML frontmatter — "every source in category X since date Y" — exactly what the frontmatter spec was built for.</li>
-            <li><strong>Backlinks</strong> surface every page that references the one you're reading.</li>
-            <li><strong>Templates &amp; Canvas</strong> mirror the source-page template and let you assemble visual boards; mobile apps + your own sync keep it with you.</li>
-            <li>Zero lock-in — it's plain Markdown, readable with or without Obsidian.</li>
+            <li><strong>Graph view</strong> renders the <code>[[wiki-links]]</code>.</li>
+            <li><strong>Dataview</strong> runs live queries over the frontmatter.</li>
+            <li><strong>Backlinks</strong> surface every page that references this one.</li>
           </ol>
         </div>
       </div>
 
-      <div class="note privacy"><b>Mind the trust boundary.</b> The inbound and outbound extensions point in opposite directions. Ingestion — whether generic or via <code>gog</code> — only <em>pulls</em> in; it should never reply, forward, or send. Deep research reaches <em>out</em> to the open web, so research questions must be phrased generically and must never carry your private source content into a search query. Obsidian is purely local. Keep these flows separate by design, and scope any cloud connector to read-only where you can.</div>
-
-      <h3>Further extensions</h3>
-      <ul class="clean">
-        <li><strong>Specialised sub-agents</strong> — task-focused agents that read only a defined slice of the store (e.g. a filing assistant, or a per-topic analyst), so each works from exactly the right context.</li>
-        <li><strong>Scheduled runs</strong> — a periodic job that ingests whatever has arrived and runs a lint pass, so the store maintains itself.</li>
-        <li><strong>Semantic search</strong> — an embeddings index over the synthesis layer for fuzzy "where did I see…" retrieval, complementing the exact frontmatter queries.</li>
-        <li><strong>OCR &amp; transcription</strong> — pipelines that turn scans, photos, and audio into text before ingest, widening what counts as a "source".</li>
-      </ul>
+      <div class="note privacy"><b>Mind the trust boundary.</b> Inbound and outbound point in opposite directions and are never fused into one step: ingestion only <em>pulls</em> in (never replies, forwards, or posts); outbound reaches <em>out</em> and must carry only generic or redacted text. Anything needing a secret loads it from a git-ignored <code>.env</code> — never a committed file. When unsure, an extension takes the <em>more</em> restrictive class.</div>
     </section>
 
     <!-- 10 -->
