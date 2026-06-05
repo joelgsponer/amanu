@@ -27,10 +27,13 @@ Supporting: `inbox/` (drop zone for new sources) · `tools/` (self-arming toolbo
 (`/healthcheck` HTML) · `design/` (the design system, if installed) · `amanu.yaml`
 (the manifest) · `CHANGELOG.log` (build story).
 
-**Convention — visual outputs default to the design system.** Any generated visual
-output (the `/healthcheck` report, exported reports, static sites, charts) uses the
-`design/` tokens by default unless that output explicitly opts out. The shipped
-`templates/design/` (Swiss defaults) is the fallback when no `design/` exists yet.
+**Convention — visual outputs default to the design system, but the user's wishes
+win.** Any generated visual output (the `/healthcheck` report, exported reports,
+static sites, charts) uses the `design/` tokens **as the default** — applied only
+when the user hasn't asked for something different. If the user requests another
+style (for a specific output or in general), honour that instead; never impose the
+predefined design over an explicit preference. The shipped `templates/design/`
+(Basel defaults) is the fallback when no `design/` exists yet.
 
 ## File naming
 
@@ -91,7 +94,8 @@ Write a single self-contained HTML file (**inline CSS, no external/CDN assets**)
 `reports/healthcheck-YYYY-MM-DD.html` with a status banner and a per-section
 pass/warn/fail table + remediation hints. **Style it with the design system** —
 `design/tokens.css` if the `design-system` extension is installed, else the shipped
-`templates/design/report.html` Swiss default. Reports, never auto-fixes. Idempotent:
+`templates/design/report.html` Basel default — unless the user asked for a
+different style. Reports, never auto-fixes. Idempotent:
 overwrite the same-day report.
 
 ## Privacy & credentials

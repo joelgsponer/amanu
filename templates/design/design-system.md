@@ -51,7 +51,9 @@ this file explains *why* so any agent tuning the system stays inside the traditi
 
 Every generated visual output (the `/healthcheck` report, exported reports, static
 sites, charts) **inlines these tokens by default** and follows the rules above —
-unless that output explicitly opts out. Tune values here (the `design-system`
-extension guides you), but keep the principles: if a change adds ornament, breaks
-the black-&-white-plus-one-red discipline, or softens the contrast, it is leaving
-the tradition.
+**this is the default, not a mandate**. It applies whenever the user hasn't asked
+for something different; if the user wants another style (for one output or in
+general), honour that instead — never impose this design over an explicit wish.
+When you *are* tuning it (the `design-system` extension guides you), keep the
+principles: if a change adds ornament, breaks the black-&-white-plus-one-red
+discipline, or softens the contrast, it is leaving the tradition.
