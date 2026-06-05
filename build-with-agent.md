@@ -87,6 +87,14 @@ The system explains itself, so neither of you needs this playbook later. You kee
 that true:
 
 - **`SCHEMA.md`** — the constitution; anyone reading it can run the system.
+- **`CLAUDE.md` + `AGENTS.md`** *(agent entrypoints)* — the conventional files a
+  coding agent auto-loads when it opens the project, so any future session is
+  instantly oriented. Keep them **short**: point to `SCHEMA.md`, list the
+  available skills, name the manifest, and restate the privacy + credential
+  rules. (`AGENTS.md` is the cross-tool standard, a.k.a. `AGENT.md`; `CLAUDE.md`
+  is what Claude Code reads — keep **one** canonical and have the other point to
+  it, so they never drift.) **Regenerate them whenever skills or extensions
+  change.**
 - **Frontmatter on every page** (`type`, `category`, `date`, `related`, `tags`)
   + `[[wiki-links]]`.
 - **Two logs, kept distinct:**
@@ -197,11 +205,16 @@ Each phase runs the six beats. Adapt wording; hit every beat; honour *Done when*
 - **TAILOR** — confirm the frontmatter fields and naming convention.
 - **BUILD** — write a tailored `SCHEMA.md`: layers + folder map; file naming; the
   frontmatter spec; the **ingest / query / lint** recipes; the privacy +
-  credential rules. Self-describing.
-- **VERIFY** — read the key sections; confirm they match intent.
+  credential rules. Self-describing. Then generate the **agent entrypoints**:
+  `AGENTS.md` (canonical — points to `SCHEMA.md`, lists the initial skills, names
+  `amanu.yaml`, restates the privacy/credential rules) and a short `CLAUDE.md`
+  that points to `AGENTS.md`.
+- **VERIFY** — read the key sections; confirm they match intent; confirm an agent
+  opening the folder would load `CLAUDE.md`/`AGENTS.md` and be oriented.
 - **CHECKPOINT** — "this is the rulebook everything follows — happy?"
-- **LOG** — `P3 · wrote SCHEMA.md`.
-- **Done when:** `SCHEMA.md` covers layers, naming, frontmatter, the 3 recipes.
+- **LOG** — `P3 · wrote SCHEMA.md + CLAUDE.md/AGENTS.md`.
+- **Done when:** `SCHEMA.md` covers layers, naming, frontmatter, the 3 recipes;
+  `CLAUDE.md` + `AGENTS.md` exist and point to it.
 
 ### P4 · Seed agent memory
 - **TEACH** — the *method* memory: durable preferences, one fact per file,
@@ -243,11 +256,13 @@ Each phase runs the six beats. Adapt wording; hit every beat; honour *Done when*
   chosen.
 - **TAILOR** — reconfirm the skill list; pick the next one.
 - **BUILD** — scaffold each chosen skill from its build prompt, wired to
-  `SCHEMA.md`. Confirm each file.
+  `SCHEMA.md`. Confirm each file. Then **refresh `AGENTS.md`/`CLAUDE.md`** so they
+  list the new commands.
 - **VERIFY** — dry-run at least `/ingest` and `/query` (smoke test).
 - **CHECKPOINT** — "your core commands exist and run — good?"
 - **LOG** — `P7 · built skills: […]`.
-- **Done when:** each chosen skill exists and its smoke test passes.
+- **Done when:** each chosen skill exists, its smoke test passes, and the agent
+  entrypoints list it.
 
 ### P8 · Wire the chosen extensions
 - **TEACH** — extensions attach at the edges; restate the **trust boundary**
@@ -257,12 +272,14 @@ Each phase runs the six beats. Adapt wording; hit every beat; honour *Done when*
   `.env.example` and the user has filled `.env`).
 - **BUILD** — scaffold each from its **`extensions.md` build prompt**, wired to
   `SCHEMA.md`; load any secrets from `.env`. Raise `tier` in the manifest as
-  inbound/outbound/automation/intelligence extensions come online.
+  inbound/outbound/automation/intelligence extensions come online. **Refresh
+  `AGENTS.md`/`CLAUDE.md`** with the new extension commands + the manifest path.
 - **VERIFY** — demonstrate each wired extension once (idempotent re-run).
 - **CHECKPOINT** — "each integration you wanted is proven — anything missing?"
 - **LOG** — `P8 · wired extensions: […] · tier=<…>`.
 - **Done when:** each chosen extension runs once successfully; manifest `tier`
-  and `extensions` updated; no secret values in any tracked file.
+  and `extensions` updated; the agent entrypoints reflect the new commands; no
+  secret values in any tracked file.
 
 ### P9 · Lint + self-document
 - **TEACH** — a health pass keeps the store honest; then the system explains
@@ -270,7 +287,8 @@ Each phase runs the six beats. Adapt wording; hit every beat; honour *Done when*
 - **TAILOR** — confirm lint scope and that a `README` is wanted.
 - **BUILD** — run the lint recipe (contradictions, orphans, staleness, missing
   links, gaps) → dated report in `kb/queries/`. Generate `README.md` (what it is,
-  how to use the skills, decisions — summarised from `CHANGELOG.log`).
+  how to use the skills, decisions — summarised from `CHANGELOG.log`). Confirm
+  `CLAUDE.md`/`AGENTS.md` reflect the final skill + extension set.
 - **VERIFY** — review the lint report and the README together.
 - **CHECKPOINT** — "the system documents itself now — does the README read right?"
 - **LOG** — `P9 · lint + README`.
