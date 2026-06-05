@@ -41,9 +41,10 @@ The one-liner a user can give you:
 ## 👤 For humans
 
 Open **[`knowledge-base-architecture.html`](knowledge-base-architecture.html)**
-— or the live version at **https://joelgsponer.github.io/amanu/** — for a visual
-overview of how the system is built and how the guided setup runs. Prefer to read
-the raw plan? It's all in [`build-with-agent.md`](build-with-agent.md).
+— or the live version at **https://joelgsponer.github.io/amanu/** — for a
+human-first guide: what it is, how it's structured, what the agent does, the
+memory system, and the **full extension catalogue with copy-paste build
+prompts**. Prefer the raw plan? It's all in [`build-with-agent.md`](build-with-agent.md).
 
 ## What's inside
 
@@ -51,7 +52,7 @@ the raw plan? It's all in [`build-with-agent.md`](build-with-agent.md).
 |------|---------|
 | `build-with-agent.md` | The agent-driven build playbook — the executable spec. |
 | `extensions.md` | The extension catalog — ~25 plug-ins across 5 categories, each with a build prompt, trust class, and tier. |
-| `knowledge-base-architecture.html` | Visual blueprint & overview for humans. |
+| `knowledge-base-architecture.html` | Human-first guide — how it works, plus the full extension catalogue with copy-paste build prompts. |
 | `index.html` | Redirect so GitHub Pages opens the overview. |
 
 ## Grows in tiers
