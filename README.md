@@ -54,6 +54,7 @@ prompts**. Prefer the raw plan? It's all in [`build-with-agent.md`](build-with-a
 | `extensions.md` | The extension catalog (**source of truth**) — 28 plug-ins across 5 categories, each with a complete, preference-asking build prompt, trust class, and tier. |
 | `knowledge-base-architecture.html` | Human-first guide — how it works, plus the full extension catalogue with copy-paste build prompts. |
 | `index.html` | Redirect so GitHub Pages opens the overview. |
+| `templates/` | `AGENTS.md` + `CLAUDE.md` entrypoint templates the build copies into a new KB (with `{{PLACEHOLDERS}}`) to wire it into the agent harness. |
 | `tools/gen-catalogue.py` | Regenerates the website's catalogue from `extensions.md` (keeps the two in sync). |
 
 ### Maintaining the catalogue
@@ -68,6 +69,16 @@ python3 tools/gen-catalogue.py --check  # CI-style: non-zero if out of sync
 
 The HTML between the `CATALOGUE:START/END` markers is generated — don't hand-edit
 it.
+
+## A brain that travels
+
+Memory is split by portability. The **in-folder** `memory/` is the agent's
+**portable brain** (conventions, gotchas, learned solutions) and `tools/` is a
+**self-arming toolbox** (scripts distilled from the `daily/` logs as recurring
+work shows up) — both travel with the folder. The **harness/machine memory**
+holds only machine-specific facts (VPN, OS quirks, paths). Move the folder to a
+new machine and behaviour is preserved; only machine memory differs. The
+auto-loaded `AGENTS.md`/`CLAUDE.md` wire all of this into each session.
 
 ## Grows in tiers
 

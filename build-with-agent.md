@@ -15,8 +15,11 @@
 ## A · Operating contract
 
 You are co-building a **two-memory knowledge base**: a wiki-style store over the
-user's documents (the *matter*), plus an agent-memory folder of durable lessons
-and preferences (the *method*). Build it *with* the user, never *for* them.
+user's documents (the *matter*), plus an in-folder **agent-memory** that is the
+system's **portable brain** (the *method* — conventions, gotchas, solutions you
+work out, and a self-arming toolbox). Build it *with* the user, never *for* them.
+Everything that should travel with the folder lives **inside** it; the
+harness/machine memory holds only machine-specific facts (see §C).
 
 **The rules — follow them in every phase:**
 
@@ -76,25 +79,54 @@ Quietly check what you're working with, then adapt — don't assume:
 - **Installed tools** — probe for `git`, and any the user might want later
   (`gog`, `rg`, `pandoc`, `ocrmypdf`, `rclone`, `whisper`). Missing is fine;
   it just gates which extensions are available now.
+- **OS + scheduler** — note the platform (macOS → `launchd`, Linux →
+  `systemd`/`cron`) so background tools can be **registered to actually start**.
+- **Harness loading** — note whether the harness auto-loads `CLAUDE.md`/`AGENTS.md`
+  (Claude Code and most do). If it doesn't, tell the user how their tool pulls in
+  context so the entrypoint still gets used.
 
 Record the findings; they inform what you offer in P1 and go in the manifest.
 
 ---
 
-## C · Self-documenting & resumable
+## C · Self-documenting, portable & resumable
 
-The system explains itself, so neither of you needs this playbook later. You keep
-that true:
+The system explains itself *and carries its own behaviour*, so neither of you
+needs this playbook later — and so the folder works the same on another machine.
+You keep that true:
 
 - **`SCHEMA.md`** — the constitution; anyone reading it can run the system.
 - **`CLAUDE.md` + `AGENTS.md`** *(agent entrypoints)* — the conventional files a
   coding agent auto-loads when it opens the project, so any future session is
-  instantly oriented. Keep them **short**: point to `SCHEMA.md`, list the
-  available skills, name the manifest, and restate the privacy + credential
-  rules. (`AGENTS.md` is the cross-tool standard, a.k.a. `AGENT.md`; `CLAUDE.md`
-  is what Claude Code reads — keep **one** canonical and have the other point to
-  it, so they never drift.) **Regenerate them whenever skills or extensions
-  change.**
+  instantly oriented; this is what **wires the KB into the harness**. Build them
+  from `templates/AGENTS.md` + `templates/CLAUDE.md`, filling the placeholders.
+  Keep them **short**: point to `SCHEMA.md`, `memory/`, `tools/`, list the
+  available skills, and restate the rules. (`AGENTS.md` is canonical, a.k.a.
+  `AGENT.md`; `CLAUDE.md` points to it so they never drift.) **Regenerate them
+  whenever skills or extensions change.**
+
+**The portable brain & the toolbox** — two in-folder stores make the system carry
+its own behaviour:
+- **`memory/`** — the agent-memory: *everything about working this KB* —
+  conventions (global + per-project), gotchas, and solutions you work out. One
+  fact per file + `memory/index.md`. Keep adding to it as you learn.
+- **`tools/`** — a **self-arming** toolbox of scripts for this KB's recurring
+  work, each catalogued in `tools/index.md` with its purpose and **lifecycle
+  (start / stop / status)**. When you process `daily/` logs, turn recurrent
+  tasks, repeated problems and obvious automations into tools here.
+- **`daily/`** — raw session logs that feed the self-arming loop.
+
+**Machine memory vs portable memory.** The harness's own memory (`~/.claude/…`)
+holds **machine-specific** facts only — VPN needs, OS quirks, local paths. The
+rule: *anything that should survive moving the folder to another machine goes in
+`memory/` or `tools/`; only machine-bound facts go in the harness memory.* Don't
+disable harness auto-loading of `CLAUDE.md`/`AGENTS.md` — it's the mechanism that
+lifts the entrypoints into context.
+
+**Run-state awareness.** Background tools (watchers, schedulers) are registered
+and **started** when built (P8), and recorded in `tools/index.md` and the manifest
+with their start/stop/status commands. At session start, check and surface any
+service that *should* be running but isn't — never assume a created script is live.
 - **Frontmatter on every page** (`type`, `category`, `date`, `related`, `tags`)
   + `[[wiki-links]]`.
 - **Two logs, kept distinct:**
@@ -114,6 +146,9 @@ that true:
   skills: [ ingest, query, lint ]
   extensions: [ ]          # names from extensions.md
   credentials: [ ]         # env-var NAMES only, never values
+  tools:                   # the self-arming toolbox + run-state
+    - { name: watch-inbox, kind: service, autostart: true,
+        start: "<cmd>", stop: "<cmd>", status: "<cmd>", state: running }
   privacy: local-first
   ```
 - **`README.md`** — a plain-language overview generated near the end.
@@ -190,51 +225,62 @@ Each phase runs the six beats. Adapt wording; hit every beat; honour *Done when*
 - **BUILD** — **write `.gitignore` first** (`.env`, `*.key`, `secrets/`, caches,
   `.DS_Store`, plus the store's own ignores); create `inbox/`,
   `raw/<category>/…`, `kb/{entities,topics,sources,queries}`, `kb/index.md`,
-  stub `kb/overview.md`; `git init`. If extensions need secrets, generate a
-  committed **`.env.example`** (var **names** + comments, no values) and a
-  git-ignored **`.env`** for the user to fill — but only after confirming `.env`
-  is ignored.
+  stub `kb/overview.md`; **the portable brain `memory/` (+ `memory/index.md`),
+  the toolbox `tools/` (+ `tools/index.md`), and `daily/`**; `git init`. If
+  extensions need secrets, generate a committed **`.env.example`** (var **names**
+  + comments, no values) and a git-ignored **`.env`** for the user to fill — but
+  only after confirming `.env` is ignored.
 - **VERIFY** — show the tree; show that `git status` does **not** list `.env`.
 - **CHECKPOINT** — "structure's in place and secrets are fenced off — good?"
-- **LOG** — `P2 · scaffold + .gitignore (+ .env.example if needed)`.
-- **Done when:** tree exists, `git init` done, `.env` is ignored (if present).
+- **LOG** — `P2 · scaffold (+ memory/ tools/ daily/) + .gitignore`.
+- **Done when:** tree exists (incl. `memory/`, `tools/`, `daily/`), `git init`
+  done, `.env` is ignored (if present).
 
 ### P3 · SCHEMA.md *(the constitution)*
 - **TEACH** — this one file makes the agent a consistent librarian; it's the
   product.
 - **TAILOR** — confirm the frontmatter fields and naming convention.
+- **TEACH (architecture)** — also explain, in plain words, the memory model: the
+  in-folder `memory/` is the **portable brain**, `tools/` is the **self-arming
+  toolbox**, and the harness memory is for **machine-specific** facts only — so
+  moving the folder preserves behaviour. This is what the entrypoints encode.
 - **BUILD** — write a tailored `SCHEMA.md`: layers + folder map; file naming; the
   frontmatter spec; the **ingest / query / lint** recipes; the privacy +
-  credential rules. Self-describing. Then generate the **agent entrypoints**:
-  `AGENTS.md` (canonical — points to `SCHEMA.md`, lists the initial skills, names
-  `amanu.yaml`, restates the privacy/credential rules) and a short `CLAUDE.md`
-  that points to `AGENTS.md`.
-- **VERIFY** — read the key sections; confirm they match intent; confirm an agent
-  opening the folder would load `CLAUDE.md`/`AGENTS.md` and be oriented.
+  credential rules. Self-describing. Then generate the **agent entrypoints** by
+  copying **`templates/AGENTS.md`** + **`templates/CLAUDE.md`** and adapting every
+  `{{PLACEHOLDER}}` to this project (name, owner, categories, skills,
+  `memory/` path). These wire the KB into the harness.
+- **VERIFY** — read the key sections; confirm an agent opening the folder would
+  load `CLAUDE.md`/`AGENTS.md`, learn the memory/tools model, and be oriented.
 - **CHECKPOINT** — "this is the rulebook everything follows — happy?"
-- **LOG** — `P3 · wrote SCHEMA.md + CLAUDE.md/AGENTS.md`.
+- **LOG** — `P3 · wrote SCHEMA.md + AGENTS.md/CLAUDE.md (from templates)`.
 - **Done when:** `SCHEMA.md` covers layers, naming, frontmatter, the 3 recipes;
-  `CLAUDE.md` + `AGENTS.md` exist and point to it.
+  `AGENTS.md` (+ `CLAUDE.md` pointer) exist, adapted, and describe memory/tools.
 
-### P4 · Seed agent memory
-- **TEACH** — the *method* memory: durable preferences, one fact per file,
-  recalled when relevant — separate from the document store.
-- **TAILOR** — ask for 2–4 standing preferences (summary style, "ask before
-  inferring", what to always flag).
-- **BUILD** — create the memory folder, one fact file each
-  (`name`/`description`/`type` + body), and its `INDEX.md`.
+### P4 · Seed the portable brain
+- **TEACH** — `memory/` is the *portable brain*: durable facts about working this
+  KB — conventions, gotchas, and solutions you'll work out over time. One fact per
+  file, recalled when relevant. It travels with the folder, and **grows** as the
+  system is used (the self-arming loop, below, feeds it from `daily/`).
+- **TAILOR** — ask for 2–4 starting facts (summary style, "ask before inferring",
+  what to always flag, any known gotcha for this domain).
+- **BUILD** — write each as a one-fact file (`name`/`description`/`type` + body) in
+  `memory/`, and update `memory/index.md`. Note that `compile-memory` (if chosen)
+  will later distil `daily/` logs into more facts **and tools**.
 - **VERIFY** — show the facts and each index line.
-- **CHECKPOINT** — "these shape *how* I work for you — anything to add?"
-- **LOG** — `P4 · seeded N memory facts`.
-- **Done when:** ≥2 fact files + memory `INDEX.md` exist.
+- **CHECKPOINT** — "these shape *how* I work for you here — anything to add?"
+- **LOG** — `P4 · seeded N brain facts`.
+- **Done when:** ≥2 fact files + `memory/index.md` exist.
 
 ### P5 · First real ingest *(prove the loop)*
 - **TEACH** — run the real pipeline on one real document, narrating each step.
 - **TAILOR** — ask the user to drop **one** real document in `inbox/`.
-- **BUILD** — run the ingest recipe live: read & classify → surface anything
-  notable → rename+move into `raw/<category>/` → write the `kb/sources/` page →
-  roll up into entity/topic pages → append `kb/log.md` → update `kb/index.md`.
-  Confirm at each write.
+- **BUILD** — run the ingest recipe live: **consult `memory/` and `tools/index.md`
+  first** (known conventions, gotchas, or a tool that already handles this kind of
+  source) → read & classify → surface anything notable → rename+move into
+  `raw/<category>/` → write the `kb/sources/` page → roll up into entity/topic
+  pages → append `kb/log.md`, and a brief observation to today's `daily/` log →
+  update `kb/index.md`. Confirm at each write.
 - **VERIFY** — open the source page and the updated index together.
 - **CHECKPOINT** — "that's one full ingest — clear how it flowed?"
 - **LOG** — `P5 · first ingest: <source>`.
@@ -271,15 +317,21 @@ Each phase runs the six beats. Adapt wording; hit every beat; honour *Done when*
   confirm its **Needs** and **Secrets** (ensure the var names are in
   `.env.example` and the user has filled `.env`).
 - **BUILD** — scaffold each from its **`extensions.md` build prompt**, wired to
-  `SCHEMA.md`; load any secrets from `.env`. Raise `tier` in the manifest as
-  inbound/outbound/automation/intelligence extensions come online. **Refresh
-  `AGENTS.md`/`CLAUDE.md`** with the new extension commands + the manifest path.
-- **VERIFY** — demonstrate each wired extension once (idempotent re-run).
-- **CHECKPOINT** — "each integration you wanted is proven — anything missing?"
-- **LOG** — `P8 · wired extensions: […] · tier=<…>`.
-- **Done when:** each chosen extension runs once successfully; manifest `tier`
-  and `extensions` updated; the agent entrypoints reflect the new commands; no
-  secret values in any tracked file.
+  `SCHEMA.md`; load any secrets from `.env`. For any **background tool** (watcher,
+  scheduler), don't stop at creating the script: **register it to autostart**
+  (launchd/systemd/cron per the preflight OS), **start it**, and **record it in
+  `tools/index.md` and the manifest** with its start/stop/status commands. Raise
+  `tier` as extensions come online, and **refresh `AGENTS.md`/`CLAUDE.md`** with
+  the new commands.
+- **VERIFY** — demonstrate each wired extension once (idempotent re-run); for a
+  background tool, run its **status** command and show it is actually running.
+- **CHECKPOINT** — "each integration you wanted is proven and (where it's a
+  service) actually running — anything missing?"
+- **LOG** — `P8 · wired extensions: […] · services running · tier=<…>`.
+- **Done when:** each chosen extension runs once successfully; **every background
+  tool is registered, started, and reports `running` via its status command**;
+  `tools/index.md` + manifest list them; entrypoints updated; no secret values in
+  any tracked file.
 
 ### P9 · Lint + self-document
 - **TEACH** — a health pass keeps the store honest; then the system explains
@@ -295,8 +347,10 @@ Each phase runs the six beats. Adapt wording; hit every beat; honour *Done when*
 - **Done when:** a lint report exists and `README.md` describes the live system.
 
 ### P10 · Handoff
-- **TEACH** — recap the whole system in plain words: two memories, folders,
-  skills, extensions, tier.
+- **TEACH** — recap the whole system in plain words: the two memories (the
+  document store + the portable brain `memory/`), the toolbox `tools/` and its
+  run-state, the machine-memory split (so the folder is portable), folders,
+  skills, extensions, and tier.
 - **TAILOR** — ask what they want to do first on their own.
 - **BUILD** — optionally a first `git commit` of the built system; set
   `last_phase: P10` in the manifest.

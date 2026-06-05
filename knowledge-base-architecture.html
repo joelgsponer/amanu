@@ -75,7 +75,7 @@
   .btn .arw{font-family:var(--mono);font-size:13px}
 
   /* ---------- folder tree ---------- */
-  .tree{font-family:var(--mono);font-size:13.5px;line-height:1.9;background:#241f18;color:#efe7d6;border-radius:13px;padding:22px 24px;overflow-x:auto;box-shadow:var(--shadow);margin:20px 0}
+  .tree{font-family:var(--mono);font-size:13px;line-height:1.7;background:#241f18;color:#efe7d6;border-radius:13px;padding:22px 24px;overflow-x:auto;box-shadow:var(--shadow);margin:20px 0;white-space:pre;tab-size:2}
   .tree .d{color:#e8b3a4}.tree .c{color:#9a8f7b}.tree .root{color:#fff;font-weight:600}
 
   /* ---------- two-up cards ---------- */
@@ -86,6 +86,9 @@
   .card .lbl{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint);font-weight:600}
   .card h4{font-family:var(--serif);font-size:21px;margin:6px 0 8px;font-weight:600}
   .card p{font-size:14.5px;color:var(--ink-soft);margin:0}
+  .callout{border:1px solid var(--rule-strong);border-left:3px solid var(--loc);background:var(--panel);border-radius:0 11px 11px 0;padding:15px 18px;margin:20px 0;font-size:14.5px;color:var(--ink-soft)}
+  .callout b{color:var(--ink)}
+  .callout .lbl{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--loc);font-weight:700;display:block;margin-bottom:5px}
 
   /* ---------- what the agent does: trio ---------- */
   .trio{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:22px 0}
@@ -221,18 +224,18 @@
     <p>Sources never change. The synthesis is freely rewritten. A single schema file is the constitution that ties them together.</p>
     <div class="tree">
 <span class="root">your-knowledge-base/</span>
-├─ <span class="c">SCHEMA.md            the constitution — conventions &amp; workflows</span>
-├─ <span class="d">inbox/</span>               <span class="c">drop zone for new documents</span>
-├─ <span class="d">raw/</span>                 <span class="c">▸ Layer 1 — immutable source files, by category</span>
-│   └─ <span class="d">&lt;your categories&gt;/</span>
-└─ <span class="d">kb/</span>                  <span class="c">▸ Layer 2 — the synthesis the agent owns</span>
-    ├─ <span class="d">entities/</span>        <span class="c">people, orgs, accounts — one page each</span>
-    ├─ <span class="d">topics/</span>          <span class="c">cross-cutting themes</span>
-    ├─ <span class="d">sources/</span>         <span class="c">one summary page per document</span>
-    ├─ <span class="d">queries/</span>         <span class="c">saved answers &amp; reports</span>
-    └─ <span class="c">index.md · log.md · overview.md</span>
+├─ <span class="d">SCHEMA.md</span>     <span class="c">Layer 3 — the constitution (conventions &amp; workflows)</span>
+├─ <span class="d">AGENTS.md</span> · <span class="d">CLAUDE.md</span>   <span class="c">auto-loaded entrypoints that orient any agent</span>
+├─ <span class="d">inbox/</span>       <span class="c">drop zone for new documents</span>
+├─ <span class="d">raw/</span>         <span class="c">Layer 1 — immutable source files, by category</span>
+├─ <span class="d">kb/</span>          <span class="c">Layer 2 — the synthesis the agent owns</span>
+│    ├─ <span class="d">entities/ topics/ sources/ queries/</span>
+│    └─ <span class="c">index.md · log.md · overview.md</span>
+├─ <span class="d">memory/</span>      <span class="c">the portable brain — conventions, gotchas, solutions</span>
+├─ <span class="d">tools/</span>       <span class="c">self-arming toolbox (+ index.md: purpose · start/stop/status)</span>
+└─ <span class="d">daily/</span>       <span class="c">session logs that feed the self-arming loop</span>
     </div>
-    <p>Every page carries YAML frontmatter (so the store is queryable) and links related pages with <code>[[wiki-links]]</code> (so it's a navigable graph). <strong>Layer 3</strong> is <code>SCHEMA.md</code> — read it and you can run the whole system.</p>
+    <p>Every page carries YAML frontmatter (so the store is queryable) and links related pages with <code>[[wiki-links]]</code> (so it's a navigable graph). <strong>Layer 3</strong>, <code>SCHEMA.md</code>, is the constitution — read it and you can run the whole system. <code>memory/</code> and <code>tools/</code> are the agent's brain and toolbox — more on those next.</p>
   </div>
 </section>
 
@@ -248,6 +251,7 @@
       <div class="do"><div class="n">lint</div><h4>Keep it honest</h4><p>Sweep for contradictions, stale claims, orphan pages, and gaps, and report what needs a human's eye.</p></div>
     </div>
     <p>And it <strong>documents itself as it goes</strong>: a <code>CHANGELOG.log</code> records every decision and why; a <code>kb/log.md</code> tracks routine operations; and it writes <code>CLAUDE.md</code> + <code>AGENTS.md</code> so any future agent that opens the folder is instantly oriented.</p>
+    <p>It also <strong>arms itself over time</strong>: as it works it jots observations to <code>daily/</code>, and a periodic pass distils those into the <code>memory/</code> brain — and, when it spots a recurring task, into a reusable script in <code>tools/</code>. The system you build keeps getting better at <em>your</em> work.</p>
   </div>
 </section>
 
@@ -255,14 +259,15 @@
 <section class="band alt" id="memory">
   <div class="wrap">
     <p class="kicker">The memory system</p>
-    <h2>Method meets matter</h2>
-    <p>The two memories cooperate. A lesson captured in agent memory shapes how the knowledge base is written; the knowledge base holds the facts that lessons are about.</p>
-    <div class="memflow">
-      <div class="card b" style="margin:0"><span class="lbl">method</span><h4>Agent memory</h4><p>One fact per file + an index. Recalled when a task makes it relevant — "ask before inferring", "always flag X", "summaries should be terse".</p></div>
-      <div class="mid">shapes&nbsp;how →<br>← grounds&nbsp;what</div>
-      <div class="card" style="margin:0"><span class="lbl">matter</span><h4>Knowledge base</h4><p>Sources → synthesis. The durable record of what your documents actually say, kept cross-referenced and current.</p></div>
+    <h2>A brain that travels with the folder</h2>
+    <p>amanu splits memory by one question: <em>should this survive moving the folder to another machine?</em> Everything about how to work <em>this</em> knowledge base lives <strong>inside</strong> it; only machine-specific facts stay behind. That's what makes the whole thing portable.</p>
+    <div class="duo">
+      <div class="card b" style="margin:0"><span class="lbl">in the folder · portable</span><h4><code>memory/</code> + <code>tools/</code> — the brain</h4><p>Conventions, gotchas, and solutions the agent works out (one fact per file), plus a self-arming toolbox of scripts for recurring work. This is the agent's <em>method</em> — and it travels with the folder.</p></div>
+      <div class="card" style="margin:0"><span class="lbl">in the folder · portable</span><h4><code>kb/</code> — the matter</h4><p>Your documents' synthesis: the durable record of what they say, cross-referenced and kept current. Part of the same portable folder.</p></div>
     </div>
-    <p>Some facts live in both — an anchor value recorded in the knowledge base <em>and</em> held in agent memory so any source that disagrees gets flagged. Together they turn a one-off summariser into a system that gets more useful over time.</p>
+    <div class="callout"><span class="lbl">Machine memory · stays put</span>The harness's own memory (e.g. <code>~/.claude/…</code>) holds only <b>machine-specific</b> facts — "this box needs the VPN", "on this Mac do it this way", local install paths. It belongs to the <b>machine</b>, not the folder.</div>
+    <p><strong>The payoff — portability.</strong> Move the folder to a new machine and the agent behaves the same, because its brain and tools came along; you only re-teach the handful of machine-specific things. The auto-loaded <code>AGENTS.md</code> is what lifts all this into each session — so keep harness auto-loading on.</p>
+    <p><strong>Self-arming &amp; run-state.</strong> The brain and toolbox <em>grow</em> as you use the system: a periodic pass mines the <code>daily/</code> logs for repeated work and distils it into <code>memory/</code> facts and <code>tools/</code> scripts. And background tools (watchers, schedulers) are started and registered when built, their state tracked in <code>tools/index.md</code> — so the agent can tell you at a glance what's running and what isn't.</p>
   </div>
 </section>
 
@@ -395,7 +400,7 @@
     </div>
     <details class="ext"><summary><span class="caret">▸</span><span class="nm">obsidian-vault</span><span class="adds">Graph view, backlinks, live frontmatter queries.</span><span class="pill loc">local</span><span class="tier">Connected</span></summary>
       <div class="body"><p class="meta"><b>Needs:</b> Obsidian + Dataview plugin &nbsp;·&nbsp; <b>Secrets:</b> none.</p>
-      <div class="prompt"><button class="copy" onclick="amanuCopy(this)">Copy prompt</button><pre><code>Set up an Obsidian vault over `kb/`, following my SCHEMA.md conventions. First ask me: which saved Dataview queries would be most useful (e.g. sources by category, recent changes, open deadlines); whether to add note templates matching the source and entity page shapes; and whether I want a starting dashboard note. Then point a vault at `kb/`, enable Dataview, add the agreed queries and templates, and confirm the graph view renders the `[[wiki-links]]` and the queries return rows. Fully local — Obsidian only reads the Markdown that's already there. Verify by opening the vault and walking the graph and one Dataview view together.</code></pre></div>
+      <div class="prompt"><button class="copy" onclick="amanuCopy(this)">Copy prompt</button><pre><code>Set up an Obsidian vault over my knowledge base, following my SCHEMA.md conventions. First ask me: which folder is the vault root — it must be the folder that actually **contains** the notes (normally `kb/`), so place the `.obsidian` config **directly there**, never in a nested or empty sub-folder (a vault rooted above or beside the notes shows up empty); which saved Dataview queries would be most useful (sources by category, recent changes, open deadlines); whether to add note templates matching the source and entity page shapes; and whether I want a starting dashboard note. Then create the `.obsidian` config at the chosen root, enable Dataview, add the agreed queries and templates, and — **if Obsidian is installed — register the vault so I can open it directly** (add it to Obsidian's vault list, or hand me an `obsidian://open?path=…` link). Fully local — Obsidian only reads the Markdown already there. Verify by opening the vault and confirming it shows the **real content** (`index.md`, `entities/`, `topics/`, `sources/`) — not an empty vault — that the graph renders the `[[wiki-links]]`, and that one Dataview query returns rows.</code></pre></div>
       <p class="trust">Trust — fully local.</p></div>
     </details>
     <details class="ext"><summary><span class="caret">▸</span><span class="nm">semantic-search</span><span class="adds">Fuzzy "where did I see…" retrieval.</span><span class="pill out">outbound*</span><span class="tier">Intelligent</span></summary>
@@ -419,17 +424,17 @@
     </div>
     <details class="ext"><summary><span class="caret">▸</span><span class="nm">auto-capture</span><span class="adds">Lessons captured without anyone remembering to.</span><span class="pill loc">local</span><span class="tier">Automated</span></summary>
       <div class="body"><p class="meta"><b>Needs:</b> session-end / pre-compaction hooks &nbsp;·&nbsp; <b>Secrets:</b> none.</p>
-      <div class="prompt"><button class="copy" onclick="amanuCopy(this)">Copy prompt</button><pre><code>Create auto-capture hooks, wired to my SCHEMA.md, that record durable lessons without anyone remembering to save them. First ask me: which moments to capture at (session end, before context compaction, or both); what kinds of thing to capture (decisions, corrections, preferences); and where to write them (suggest `daily/YYYY-MM-DD.md`). Then add hooks that append concise raw observations to the daily log, for later distillation by `compile-memory`. Fully local. Verify by triggering the hook once and showing the appended entry.</code></pre></div>
+      <div class="prompt"><button class="copy" onclick="amanuCopy(this)">Copy prompt</button><pre><code>Create auto-capture hooks, wired to my SCHEMA.md, that record durable lessons without anyone remembering to save them. First ask me: which moments to capture at (session end, before context compaction, or both); what kinds of thing to capture (decisions, corrections, preferences, gotchas); and where to write them (suggest `daily/YYYY-MM-DD.md`). Then add hooks that append concise raw observations to the daily log, for later distillation by `compile-memory` into the portable brain (`memory/`) and the toolbox (`tools/`). Register the hooks with the harness and **record them in `tools/index.md`** so their state is visible. Fully local. Verify by triggering a capture once and showing the appended entry.</code></pre></div>
       <p class="trust">Trust — local.</p></div>
     </details>
-    <details class="ext"><summary><span class="caret">▸</span><span class="nm">compile-memory</span><span class="adds">Daily logs distilled into memory facts.</span><span class="pill loc">local</span><span class="tier">Automated</span></summary>
+    <details class="ext"><summary><span class="caret">▸</span><span class="nm">compile-memory</span><span class="adds">Daily logs distilled into memory facts **and new tools** (self-arming).</span><span class="pill loc">local</span><span class="tier">Automated</span></summary>
       <div class="body"><p class="meta"><b>Needs:</b> a scheduler + a compile.py &nbsp;·&nbsp; <b>Secrets:</b> none.</p>
-      <div class="prompt"><button class="copy" onclick="amanuCopy(this)">Copy prompt</button><pre><code>Create a `compile.py`, wired to my SCHEMA.md, that distils the daily logs into clean agent-memory facts. First ask me: when it should run (e.g. nightly); how aggressively to deduplicate against existing facts; and whether new facts are written automatically or staged for my approval. Then read the `daily/` logs, extract durable lessons and preferences, deduplicate against the existing one-fact memory files, write new fact files (name/description/type + body), and update the memory `INDEX.md`. Idempotent — already-compiled days are skipped. Runs unattended and stays local. (Builds on the approach in coleam00/claude-memory-compiler.) Verify by compiling one day's log and reviewing the facts it produced.</code></pre></div>
+      <div class="prompt"><button class="copy" onclick="amanuCopy(this)">Copy prompt</button><pre><code>Create a `compile.py`, wired to my SCHEMA.md, that distils the daily logs into the portable brain — and arms it with tools. First ask me: when it should run (e.g. nightly); how aggressively to deduplicate against existing facts; whether new facts and tools are written automatically or staged for my approval; and a threshold for "recurrent" (how many times a task must repeat before it becomes a tool). Then read the `daily/` logs and do two things: (1) extract durable lessons, gotchas and preferences, deduplicate against the existing one-fact files in `memory/`, write new fact files (name/description/type + body), and update `memory/index.md`; (2) detect recurrent tasks, repeated problems, and obvious automations or optimizations, and for each that crosses the threshold, propose or generate a small script into `tools/` and catalogue it in `tools/index.md` (purpose, when to use, how it was derived, and start/stop/status if it runs as a service). This is the self-arming loop: the system builds its own brain and toolbox as it's used. Idempotent — already-compiled days are skipped. Runs unattended and stays local. (Builds on the approach in coleam00/claude-memory-compiler.) Verify by compiling one day's log and reviewing the facts — and any proposed tool — it produced.</code></pre></div>
       <p class="trust">Trust — local. Builds on coleam00/claude-memory-compiler.</p></div>
     </details>
     <details class="ext"><summary><span class="caret">▸</span><span class="nm">scheduled-maintenance</span><span class="adds">Ingests &amp; lints itself on a timer.</span><span class="pill loc">local</span><span class="tier">Automated</span></summary>
       <div class="body"><p class="meta"><b>Needs:</b> cron / launchd &nbsp;·&nbsp; <b>Secrets:</b> none.</p>
-      <div class="prompt"><button class="copy" onclick="amanuCopy(this)">Copy prompt</button><pre><code>Create a `maintain` job, wired to my SCHEMA.md, that keeps the store healthy on a timer. First ask me: the schedule (e.g. nightly); which steps to run (ingest whatever's in `inbox/`, then `/lint`, and optionally `digest`); and where to write the run summary. Then set up the schedule (cron/launchd) to run the agreed steps and append a short summary to `kb/log.md` each time. Fully local. Verify by running the job once by hand and showing the summary line it wrote.</code></pre></div>
+      <div class="prompt"><button class="copy" onclick="amanuCopy(this)">Copy prompt</button><pre><code>Create a `maintain` job, wired to my SCHEMA.md, that keeps the store healthy on a timer. First ask me: the schedule (e.g. nightly); which steps to run (ingest whatever's in `inbox/`, then `/lint`, and optionally `digest`); and where to write the run summary. Then write the job to `tools/`, **register it on the schedule** (launchd/systemd/cron), and **record it in `tools/index.md` and `amanu.yaml`** with its start, stop and status commands so its run-state is visible. Each run executes the agreed steps and appends a short summary to `kb/log.md`. Fully local. Verify by running the job once by hand, showing the summary line it wrote, and confirming the schedule is registered via its status command.</code></pre></div>
       <p class="trust">Trust — local.</p></div>
     </details>
     <details class="ext"><summary><span class="caret">▸</span><span class="nm">encrypted-backup</span><span class="adds">Off-machine backup; only ciphertext leaves.</span><span class="pill out">outbound</span><span class="tier">Automated</span></summary>
@@ -439,7 +444,7 @@
     </details>
     <details class="ext"><summary><span class="caret">▸</span><span class="nm">watch-inbox</span><span class="adds">Ingest fires the moment a source lands.</span><span class="pill loc">local</span><span class="tier">Automated</span></summary>
       <div class="body"><p class="meta"><b>Needs:</b> a filesystem watcher (fswatch / inotify) &nbsp;·&nbsp; <b>Secrets:</b> none.</p>
-      <div class="prompt"><button class="copy" onclick="amanuCopy(this)">Copy prompt</button><pre><code>Create a `watch-inbox` hook, wired to my SCHEMA.md, that ingests the moment a file lands. First ask me: which watcher to use (`fswatch`/inotify) or whether to fall back to a short poll; whether to first run `ingest-email` and `sync-drive` to gather remote sources; and a debounce window so a burst of files is handled as one batch. Then watch `inbox/` and trigger `/ingest` on new files, after the optional gather step. Fully local. Verify by dropping a file in `inbox/` and watching the ingest fire.</code></pre></div>
+      <div class="prompt"><button class="copy" onclick="amanuCopy(this)">Copy prompt</button><pre><code>Create a `watch-inbox` tool, wired to my SCHEMA.md, that ingests the moment a file lands. First ask me: which watcher to use (`fswatch`/inotify) or whether to fall back to a short poll; whether to first run `ingest-email` and `sync-drive` to gather remote sources; and a debounce window so a burst of files is handled as one batch. Then write the watcher to `tools/`, and — because a created script that never runs is useless — **register it to start automatically** (launchd on macOS, systemd/cron on Linux), **start it now**, and **record it in `tools/index.md` and `amanu.yaml`** with its start, stop and status commands. It watches `inbox/` and triggers `/ingest` on new files after the optional gather step. Fully local. Verify by running its **status** command to confirm it's actually running, then dropping a file in `inbox/` and watching the ingest fire.</code></pre></div>
       <p class="trust">Trust — local.</p></div>
     </details>
     <div class="catgroup">

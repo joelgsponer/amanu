@@ -215,7 +215,7 @@ Create an `export-report` skill, wired to my SCHEMA.md, that renders a topic or 
 - **Trust note:** fully local.
 
 ```text
-Set up an Obsidian vault over `kb/`, following my SCHEMA.md conventions. First ask me: which saved Dataview queries would be most useful (e.g. sources by category, recent changes, open deadlines); whether to add note templates matching the source and entity page shapes; and whether I want a starting dashboard note. Then point a vault at `kb/`, enable Dataview, add the agreed queries and templates, and confirm the graph view renders the `[[wiki-links]]` and the queries return rows. Fully local — Obsidian only reads the Markdown that's already there. Verify by opening the vault and walking the graph and one Dataview view together.
+Set up an Obsidian vault over my knowledge base, following my SCHEMA.md conventions. First ask me: which folder is the vault root — it must be the folder that actually **contains** the notes (normally `kb/`), so place the `.obsidian` config **directly there**, never in a nested or empty sub-folder (a vault rooted above or beside the notes shows up empty); which saved Dataview queries would be most useful (sources by category, recent changes, open deadlines); whether to add note templates matching the source and entity page shapes; and whether I want a starting dashboard note. Then create the `.obsidian` config at the chosen root, enable Dataview, add the agreed queries and templates, and — **if Obsidian is installed — register the vault so I can open it directly** (add it to Obsidian's vault list, or hand me an `obsidian://open?path=…` link). Fully local — Obsidian only reads the Markdown already there. Verify by opening the vault and confirming it shows the **real content** (`index.md`, `entities/`, `topics/`, `sources/`) — not an empty vault — that the graph renders the `[[wiki-links]]`, and that one Dataview query returns rows.
 ```
 
 ### semantic-search · outbound* · Intelligent
@@ -256,16 +256,16 @@ Create an `ask` skill, wired to my SCHEMA.md, that answers natural-language ques
 - **Trust note:** local.
 
 ```text
-Create auto-capture hooks, wired to my SCHEMA.md, that record durable lessons without anyone remembering to save them. First ask me: which moments to capture at (session end, before context compaction, or both); what kinds of thing to capture (decisions, corrections, preferences); and where to write them (suggest `daily/YYYY-MM-DD.md`). Then add hooks that append concise raw observations to the daily log, for later distillation by `compile-memory`. Fully local. Verify by triggering the hook once and showing the appended entry.
+Create auto-capture hooks, wired to my SCHEMA.md, that record durable lessons without anyone remembering to save them. First ask me: which moments to capture at (session end, before context compaction, or both); what kinds of thing to capture (decisions, corrections, preferences, gotchas); and where to write them (suggest `daily/YYYY-MM-DD.md`). Then add hooks that append concise raw observations to the daily log, for later distillation by `compile-memory` into the portable brain (`memory/`) and the toolbox (`tools/`). Register the hooks with the harness and **record them in `tools/index.md`** so their state is visible. Fully local. Verify by triggering a capture once and showing the appended entry.
 ```
 
 ### compile-memory · local · Automated
-- **Adds:** Daily logs distilled into memory facts.
+- **Adds:** Daily logs distilled into memory facts **and new tools** (self-arming).
 - **Needs:** a scheduler + a `compile.py` · **Secrets:** none.
 - **Trust note:** local. Builds on coleam00/claude-memory-compiler.
 
 ```text
-Create a `compile.py`, wired to my SCHEMA.md, that distils the daily logs into clean agent-memory facts. First ask me: when it should run (e.g. nightly); how aggressively to deduplicate against existing facts; and whether new facts are written automatically or staged for my approval. Then read the `daily/` logs, extract durable lessons and preferences, deduplicate against the existing one-fact memory files, write new fact files (name/description/type + body), and update the memory `INDEX.md`. Idempotent — already-compiled days are skipped. Runs unattended and stays local. (Builds on the approach in coleam00/claude-memory-compiler.) Verify by compiling one day's log and reviewing the facts it produced.
+Create a `compile.py`, wired to my SCHEMA.md, that distils the daily logs into the portable brain — and arms it with tools. First ask me: when it should run (e.g. nightly); how aggressively to deduplicate against existing facts; whether new facts and tools are written automatically or staged for my approval; and a threshold for "recurrent" (how many times a task must repeat before it becomes a tool). Then read the `daily/` logs and do two things: (1) extract durable lessons, gotchas and preferences, deduplicate against the existing one-fact files in `memory/`, write new fact files (name/description/type + body), and update `memory/index.md`; (2) detect recurrent tasks, repeated problems, and obvious automations or optimizations, and for each that crosses the threshold, propose or generate a small script into `tools/` and catalogue it in `tools/index.md` (purpose, when to use, how it was derived, and start/stop/status if it runs as a service). This is the self-arming loop: the system builds its own brain and toolbox as it's used. Idempotent — already-compiled days are skipped. Runs unattended and stays local. (Builds on the approach in coleam00/claude-memory-compiler.) Verify by compiling one day's log and reviewing the facts — and any proposed tool — it produced.
 ```
 
 ### scheduled-maintenance · local · Automated
@@ -274,7 +274,7 @@ Create a `compile.py`, wired to my SCHEMA.md, that distils the daily logs into c
 - **Trust note:** local.
 
 ```text
-Create a `maintain` job, wired to my SCHEMA.md, that keeps the store healthy on a timer. First ask me: the schedule (e.g. nightly); which steps to run (ingest whatever's in `inbox/`, then `/lint`, and optionally `digest`); and where to write the run summary. Then set up the schedule (cron/launchd) to run the agreed steps and append a short summary to `kb/log.md` each time. Fully local. Verify by running the job once by hand and showing the summary line it wrote.
+Create a `maintain` job, wired to my SCHEMA.md, that keeps the store healthy on a timer. First ask me: the schedule (e.g. nightly); which steps to run (ingest whatever's in `inbox/`, then `/lint`, and optionally `digest`); and where to write the run summary. Then write the job to `tools/`, **register it on the schedule** (launchd/systemd/cron), and **record it in `tools/index.md` and `amanu.yaml`** with its start, stop and status commands so its run-state is visible. Each run executes the agreed steps and appends a short summary to `kb/log.md`. Fully local. Verify by running the job once by hand, showing the summary line it wrote, and confirming the schedule is registered via its status command.
 ```
 
 ### encrypted-backup · outbound · Automated
@@ -292,7 +292,7 @@ Create a `backup` job, wired to my SCHEMA.md, that backs the store up off-machin
 - **Trust note:** local.
 
 ```text
-Create a `watch-inbox` hook, wired to my SCHEMA.md, that ingests the moment a file lands. First ask me: which watcher to use (`fswatch`/inotify) or whether to fall back to a short poll; whether to first run `ingest-email` and `sync-drive` to gather remote sources; and a debounce window so a burst of files is handled as one batch. Then watch `inbox/` and trigger `/ingest` on new files, after the optional gather step. Fully local. Verify by dropping a file in `inbox/` and watching the ingest fire.
+Create a `watch-inbox` tool, wired to my SCHEMA.md, that ingests the moment a file lands. First ask me: which watcher to use (`fswatch`/inotify) or whether to fall back to a short poll; whether to first run `ingest-email` and `sync-drive` to gather remote sources; and a debounce window so a burst of files is handled as one batch. Then write the watcher to `tools/`, and — because a created script that never runs is useless — **register it to start automatically** (launchd on macOS, systemd/cron on Linux), **start it now**, and **record it in `tools/index.md` and `amanu.yaml`** with its start, stop and status commands. It watches `inbox/` and triggers `/ingest` on new files after the optional gather step. Fully local. Verify by running its **status** command to confirm it's actually running, then dropping a file in `inbox/` and watching the ingest fire.
 ```
 
 ---
