@@ -14,8 +14,8 @@ bulk-read the whole store.**
 
 ## Orient first
 - **`SCHEMA.md`** is the constitution — read it for the full conventions (the
-  three layers, file naming, the frontmatter spec, the ingest / query / lint
-  recipes, and the privacy + credential rules).
+  three layers, file naming, the frontmatter spec, the ingest / query / lint /
+  compile / healthcheck recipes, and the privacy + credential rules).
 - **`kb/index.md`** is the catalog — read it on demand to find the right pages.
 - **`memory/index.md`** and **`tools/index.md`** are your brain and your toolbox
   (below) — consult them before solving a problem from scratch.
@@ -51,28 +51,37 @@ facts go in the harness memory. Do **not** disable harness auto-loading of
 each is catalogued in **`tools/index.md`** with its purpose, when to use it, how
 it was derived, and its **lifecycle** (how to start / stop / check it).
 
-- **Self-arming:** when you process the `daily/` logs, look for **recurrent tasks,
-  repeated problems, and obvious automations**, and turn them into tools here —
-  then record them in `tools/index.md`. The toolbox should grow as the KB is used.
+- **Self-arming:** **`/compile`** reads the `daily/` logs and distils them into
+  `memory/` facts and `tools/` scripts — run it to grow the brain and toolbox on
+  demand (the Automated tier schedules it for you).
 - **Run-state awareness:** some tools are background services (watchers,
   schedulers). **At session start, check `tools/index.md` and report any service
-  that should be running but isn't** (use each tool's `status` command). Never
-  assume a created script is actually running.
+  that should be running but isn't** (use its `status` command; treat a stale
+  heartbeat as down). Never assume a created script is actually running — run
+  **`/healthcheck`** for a full system audit + HTML report.
 
 ## How it's organised
 - `raw/` — immutable source documents, by category: {{CATEGORIES}}.
 - `kb/` — the synthesis you maintain (`entities/ topics/ sources/ queries/`, plus
   `index.md`, `log.md`, `overview.md`). Frontmatter on every page; `[[wiki-links]]`.
 - `memory/` — the portable brain. `tools/` — the toolbox. `daily/` — session logs.
+  `reports/` — `/healthcheck` HTML reports.
 - `amanu.yaml` — the manifest (tier, categories, skills, extensions, and the
-  `tools:` list with each tool's run-state).
+  `tools:` list with each tool's run-state + heartbeat).
 
 ## Skills — one-word workflows
-Invoke these rather than improvising:
+Invoke these rather than improvising. Format each as `- /name — one-line purpose`:
 {{SKILLS}}
-<!-- e.g. /ingest — file & cross-reference a new document (it consults memory/ and
-tools/ first, and appends observations to daily/) · /query — answer from the
-synthesis · /lint — health check · plus any extensions you added. -->
+<!-- The five core skills are always present; list any chosen extensions after them:
+- `/ingest` — file & cross-reference a new document (consults memory/ + tools/ first; logs to daily/)
+- `/query` — answer from the synthesis, with citations (logs to daily/)
+- `/lint` — content health check (orphans, contradictions, stale claims, gaps)
+- `/compile` — distil daily/ logs into memory/ facts + tools/ scripts (the self-arming loop)
+- `/healthcheck` — audit the running system; write an HTML report to reports/
+-->
+
+The self-arming loop runs **on demand** here (`/compile`); if the Automated tier is
+added, hooks + a scheduler fire it automatically.
 
 ## Working rules
 - **Local-first** — nothing leaves the machine without an explicit OK.

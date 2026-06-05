@@ -67,12 +67,14 @@ def parse(md):
         if cur is not None and line.startswith("### "):
             parts = [p.strip() for p in line[4:].split("·")]
             entry = {"name": parts[0], "trust": parts[1], "tier": parts[2],
-                     "adds": "", "needs": "", "secrets": "", "note": "", "prompt": ""}
+                     "adds": "", "skill": "", "needs": "", "secrets": "", "note": "", "prompt": ""}
             j = i + 1
             while j < n and not lines[j].startswith("### ") and not lines[j].startswith("## "):
                 ln = lines[j]
                 if ln.startswith("- **Adds:**"):
                     entry["adds"] = ln.split("**Adds:**", 1)[1].strip()
+                elif ln.startswith("- **Skill:**"):
+                    entry["skill"] = ln.split("**Skill:**", 1)[1].strip()
                 elif ln.startswith("- **Needs:**"):
                     rest = ln.split("**Needs:**", 1)[1]
                     needs, _, secrets = rest.partition("**Secrets:**")
@@ -104,7 +106,10 @@ def render(groups):
         out.append('    </div>')
         for e in g["entries"]:
             cls = trust_class(e["trust"])
-            meta = '<b>Needs:</b> %s &nbsp;·&nbsp; <b>Secrets:</b> %s' % (
+            meta = ''
+            if e["skill"]:
+                meta += '<b>Invoke:</b> %s &nbsp;·&nbsp; ' % esc(e["skill"], keep_ticks=True)
+            meta += '<b>Needs:</b> %s &nbsp;·&nbsp; <b>Secrets:</b> %s' % (
                 esc(e["needs"]), esc(e["secrets"]))
             out.append(
                 '    <details class="ext"><summary>'

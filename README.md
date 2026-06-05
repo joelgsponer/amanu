@@ -46,15 +46,19 @@ human-first guide: what it is, how it's structured, what the agent does, the
 memory system, and the **full extension catalogue with copy-paste build
 prompts**. Prefer the raw plan? It's all in [`build-with-agent.md`](build-with-agent.md).
 
+**Prerequisites:** just an AI coding agent (e.g. Claude Code) and, ideally, `git`
+installed for version history — the agent checks for it in its preflight and will
+guide you if it's missing. Everything else is plain files on your machine.
+
 ## What's inside
 
 | File | Purpose |
 |------|---------|
 | `build-with-agent.md` | The agent-driven build playbook — the executable spec. |
-| `extensions.md` | The extension catalog (**source of truth**) — 28 plug-ins across 5 categories, each with a complete, preference-asking build prompt, trust class, and tier. |
+| `extensions.md` | The extension catalog (**source of truth**) — 32 plug-ins across 5 categories, each with a complete, preference-asking build prompt, trust class, and tier. |
 | `knowledge-base-architecture.html` | Human-first guide — how it works, plus the full extension catalogue with copy-paste build prompts. |
 | `index.html` | Redirect so GitHub Pages opens the overview. |
-| `templates/` | `AGENTS.md` + `CLAUDE.md` entrypoint templates the build copies into a new KB (with `{{PLACEHOLDERS}}`) to wire it into the agent harness. |
+| `templates/` | What the build copies into a new KB (with `{{PLACEHOLDERS}}`): `AGENTS.md` + `CLAUDE.md` entrypoints, `SCHEMA.md` constitution, `schedulers/` (launchd/systemd/cron), and `design/` (a Swiss design system for all HTML output). |
 | `tools/gen-catalogue.py` | Regenerates the website's catalogue from `extensions.md` (keeps the two in sync). |
 
 ### Maintaining the catalogue
@@ -75,19 +79,22 @@ it.
 Memory is split by portability. The **in-folder** `memory/` is the agent's
 **portable brain** — a **cross-linked knowledge graph** of conventions, gotchas
 and learned solutions (typed facts with `[[wiki-links]]`, like the kb but tuned
-for *method*) — and `tools/` is a **self-arming toolbox** (scripts distilled from
-the `daily/` logs as recurring work shows up). Both travel with the folder. The **harness/machine memory**
+for *method*) — and `tools/` is a **self-arming toolbox** (scripts the core
+`/compile` distils from the `daily/` logs as recurring work shows up — on demand
+by default, automatically once you add the Automated tier). Both travel with the
+folder. The **harness/machine memory**
 holds only machine-specific facts (VPN, OS quirks, paths). Move the folder to a
 new machine and behaviour is preserved; only machine memory differs. The
 auto-loaded `AGENTS.md`/`CLAUDE.md` wire all of this into each session.
 
 ## Grows in tiers
 
-The build delivers a **Starter** system (ingest · query · lint, fully offline);
-extensions raise it through **Connected** (inbound feeds + outbound consumption)
-→ **Automated** (hooks, compile loop, cron, backup) → **Intelligent** (sub-agents,
-semantic search, reconciliation). A machine-readable `amanu.yaml` manifest tracks
-the shape and makes the build resumable.
+The build delivers a **Starter** system (ingest · query · lint · **compile** ·
+**healthcheck**, fully offline — already self-arming and self-verifying *on
+demand*); extensions raise it through **Connected** (inbound feeds + outbound
+consumption) → **Automated** (the same loop, now fired by hooks + a scheduler) →
+**Intelligent** (sub-agents, semantic search, reconciliation). A machine-readable
+`amanu.yaml` manifest tracks the shape and makes the build resumable.
 
 ## Privacy
 

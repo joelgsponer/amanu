@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- amanu launchd template → ~/Library/LaunchAgents/{{LABEL}}.plist
+     Replace {{...}} with absolute values. RunAtLoad makes it boot-persistent.
+     The script must refresh its heartbeat ({{STATE}}) on each successful run. -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>            <string>{{LABEL}}</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>{{CMD}}</string>
+        <string>{{ARGS}}</string>
+    </array>
+    <key>WorkingDirectory</key> <string>{{WORKDIR}}</string>
+    <key>RunAtLoad</key>        <true/>
+    <key>KeepAlive</key>        <true/>          <!-- watchers: keep alive; for a timer-style job use StartInterval/StartCalendarInterval and remove KeepAlive -->
+    <key>StandardOutPath</key>  <string>{{LOG}}</string>
+    <key>StandardErrorPath</key><string>{{LOG}}</string>
+</dict>
+</plist>

@@ -1,0 +1,12 @@
+# amanu systemd template → ~/.config/systemd/user/{{LABEL}}.timer
+# Enable with: systemctl --user enable --now {{LABEL}}.timer
+# (Persistent=true catches up a run missed while the machine was off.)
+[Unit]
+Description=amanu {{LABEL}} schedule
+
+[Timer]
+OnCalendar={{CALENDAR}}
+Persistent=true
+
+[Install]
+WantedBy=timers.target

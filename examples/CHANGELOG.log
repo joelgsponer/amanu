@@ -1,0 +1,34 @@
+[2026-01-10 09:14] P0 · initialized
+  built:   CHANGELOG.log + amanu.yaml · depth=guided
+  why:     start the co-build; record state so it's resumable from the manifest
+  next:    P1 — shape interview
+
+[2026-01-10 09:31] P1 · shape
+  built:   categories=[clients,invoices,contracts,taxes,admin] skills=[ingest,query,lint,compile,healthcheck] extensions=[]
+  why:     freelance paperwork; goal = "find any client doc in 10s, be tax-ready"
+  next:    P2 — scaffold + .gitignore
+
+[2026-01-10 09:48] P2 · scaffold
+  built:   .gitignore, inbox/, raw/{clients,invoices,contracts,taxes,admin}/, kb/{…}, memory/ tools/ daily/ reports/, git init
+  why:     three-layer store; secrets fenced before any sensitive data exists
+  next:    P3 — write the tailored SCHEMA.md
+
+[2026-01-10 10:05] P3 · constitution
+  built:   SCHEMA.md (from templates/SCHEMA.md) + AGENTS.md/CLAUDE.md
+  why:     one rulebook makes the agent a consistent librarian; entrypoints wire it into the harness
+  next:    P4 — seed the portable brain
+
+[2026-01-12 14:02] P5 · first ingest
+  built:   kb/sources/2026-01-12_acme_invoice_4471 + entities/acme; daily/2026-01-12 observation
+  why:     prove the pipeline on one real document end to end
+  next:    P6 — first query
+
+[2026-01-12 14:40] P7 · built core skills: ingest query lint compile healthcheck
+  built:   five skills; ran /compile once → 1 memory fact; /healthcheck → green report
+  why:     the self-arming loop closed once; the system can verify itself
+  next:    P8/P9 — (no extensions chosen) lint + healthcheck + README
+
+[2026-01-12 15:10] P10 · handoff
+  built:   first git commit of the live system; last_phase=P10
+  why:     Starter system live, self-documenting, owner can run ingest+query unaided
+  next:    — (add extensions from extensions.md when ready)

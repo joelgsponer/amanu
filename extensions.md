@@ -75,6 +75,7 @@ are never fused into one step.
 
 ### email · inbound · Connected
 - **Adds:** A Gmail label becomes an automatic source feed.
+- **Skill:** `/ingest-email`
 - **Needs:** `gog` (Google Workspace CLI) · **Secrets:** none — `gog` uses its own OAuth login.
 - **Trust note:** never sends, replies, or forwards.
 
@@ -84,6 +85,7 @@ Create an `ingest-email` skill, wired to my SCHEMA.md, that turns a Gmail label 
 
 ### drive-sync · inbound · Connected
 - **Adds:** A cloud folder mirrors into the inbox.
+- **Skill:** `/sync-drive`
 - **Needs:** `gog` (Drive) or `rclone` · **Secrets:** none for `gog`; `rclone` keeps its own config (out of git).
 - **Trust note:** read-only on the remote; never uploads.
 
@@ -93,6 +95,7 @@ Create a `sync-drive` skill (or watch hook), wired to my SCHEMA.md, that mirrors
 
 ### scan-ocr · inbound · Connected
 - **Adds:** Scans and photos become searchable text sources.
+- **Skill:** `scan-ocr` (pre-ingest step)
 - **Needs:** `ocrmypdf` / `tesseract` · **Secrets:** none.
 - **Trust note:** fully local.
 
@@ -102,6 +105,7 @@ Create a `scan-ocr` step, wired to my SCHEMA.md, that makes scanned PDFs and pho
 
 ### web-clipper · inbound · Connected
 - **Adds:** A URL becomes a clean Markdown source page.
+- **Skill:** `/clip`
 - **Needs:** a fetch tool + `pandoc`/readability · **Secrets:** none.
 - **Trust note:** fetches public pages only; no private data leaves.
 
@@ -111,7 +115,8 @@ Create a `clip` skill, wired to my SCHEMA.md, that turns a URL into a clean sour
 
 ### audio-transcribe · inbound · Connected
 - **Adds:** Voice memos & meetings become text sources.
-- **Needs:** a transcription tool (e.g. `whisper`) · **Secrets:** none if local; an API key if hosted.
+- **Skill:** `/transcribe`
+- **Needs:** a transcription tool (e.g. `whisper`) · **Secrets:** none if local; `TRANSCRIBE_API_KEY` if hosted.
 - **Trust note:** prefer a local model to keep audio on-machine.
 
 ```text
@@ -120,6 +125,7 @@ Create a `transcribe` step, wired to my SCHEMA.md, that turns audio into text so
 
 ### calendar-pull · inbound · Connected
 - **Adds:** Calendar events become dated context.
+- **Skill:** `/pull-calendar`
 - **Needs:** `gog` (Calendar) · **Secrets:** none.
 - **Trust note:** read-only.
 
@@ -129,6 +135,7 @@ Create a `pull-calendar` skill, wired to my SCHEMA.md, that brings calendar even
 
 ### csv-import · inbound · Connected
 - **Adds:** Tabular & financial exports become structured sources.
+- **Skill:** `/import-csv`
 - **Needs:** a CSV parser (built-in) · **Secrets:** none.
 - **Trust note:** local; flag any secrets/account numbers for the user.
 
@@ -138,11 +145,22 @@ Create an `import-csv` skill, wired to my SCHEMA.md, that turns spreadsheets and
 
 ### messaging-export · inbound · Connected
 - **Adds:** Exported chat threads become sources.
+- **Skill:** `/import-chat`
 - **Needs:** the platform's export + a parser · **Secrets:** none.
 - **Trust note:** local; treat content as sensitive.
 
 ```text
 Create an `import-chat` skill, wired to my SCHEMA.md, that turns an exported chat archive (Signal, Telegram, WhatsApp, …) into sources. First ask me: which platform and export format it is; whether to import the whole thread as one page, or split by day or by conversation; and any redaction rules (names, numbers, anything to drop). Then parse the archive from `inbox/` into dated `kb/sources/` page(s) with participants and date-range in frontmatter, applying the redactions before anything is written to disk. Treat the content as sensitive and keep it fully local. Verify on one export: show the parsed page and confirm the redactions held.
+```
+
+### pii-guard · local · Connected
+- **Adds:** A safety gate that scans inbound sources for secrets/PII before they're filed.
+- **Skill:** `/pii-guard` (runs at ingest)
+- **Needs:** a pattern/regex scanner (built-in) · **Secrets:** none.
+- **Trust note:** fully local; it only flags, never transmits.
+
+```text
+Create a `pii-guard` step, wired to my SCHEMA.md, that screens files in `inbox/` for sensitive data before `/ingest` files them — reinforcing the credential rules. First ask me: which categories of sensitive data to flag (passwords/recovery phrases, account numbers, IBANs, AHV/SSNs, card numbers, API keys); whether a hit should *block* ingest until I confirm or just *annotate* the resulting source page; and any allow-list of patterns that are safe in this store. Then scan each inbound file's text for those patterns and, on a hit, surface the match (with context, masked) and apply the agreed policy — never auto-deleting the source and never sending anything anywhere. Crucially, if a file contains a true secret (password, recovery phrase, private key), stop and tell me to remove it from the source itself before filing. Fully local. Idempotent — re-scanning a cleared file is cheap and silent. Verify on one file containing a fake account number: show the flag and the policy it applied.
 ```
 
 ---
@@ -152,7 +170,8 @@ Create an `import-chat` skill, wired to my SCHEMA.md, that turns an exported cha
 
 ### deep-research · outbound · Connected
 - **Adds:** Verified, cited external research folded in.
-- **Needs:** web search + fetch · **Secrets:** a search API key if using a paid provider.
+- **Skill:** `/research`
+- **Needs:** web search + fetch · **Secrets:** `SEARCH_API_KEY` if using a paid search provider (else none).
 - **Trust note:** phrase queries generically; never paste private source content into a search.
 
 ```text
@@ -161,7 +180,8 @@ Create a `research` skill, wired to my SCHEMA.md, that enriches the store with v
 
 ### digest · outbound* · Connected
 - **Adds:** A periodic "what changed / needs action" summary.
-- **Needs:** none (reads `kb/log.md` + frontmatter) · **Secrets:** none unless emailed out.
+- **Skill:** `/digest`
+- **Needs:** none (reads `kb/log.md` + frontmatter) · **Secrets:** none — `gog` OAuth covers email delivery if you enable it.
 - **Trust note:** local if saved to disk; outbound only if you choose to send it.
 
 ```text
@@ -170,6 +190,7 @@ Create a `digest` skill, wired to my SCHEMA.md, that produces a periodic "what c
 
 ### calendar-push · outbound · Connected
 - **Adds:** Document deadlines become calendar events.
+- **Skill:** `/push-deadlines`
 - **Needs:** `gog` (Calendar) · **Secrets:** none.
 - **Trust note:** writes events only; sends nothing else.
 
@@ -179,7 +200,8 @@ Create a `push-deadlines` skill, wired to my SCHEMA.md, that turns document dead
 
 ### task-export · outbound · Connected
 - **Adds:** Open items become reminders / tasks.
-- **Needs:** a task CLI/MCP (Reminders, Todoist…) · **Secrets:** API key for hosted task apps.
+- **Skill:** `/export-tasks`
+- **Needs:** a task CLI/MCP (Reminders, Todoist…) · **Secrets:** `TASK_API_KEY` for hosted task apps (none for local Apple Reminders).
 - **Trust note:** push only the task title, not private detail.
 
 ```text
@@ -188,6 +210,7 @@ Create an `export-tasks` skill, wired to my SCHEMA.md, that pushes open action i
 
 ### redacted-publish · outbound · Intelligent
 - **Adds:** A safe, public subset as a static site.
+- **Skill:** `/publish`
 - **Needs:** a static-site step + a redaction pass · **Secrets:** none.
 - **Trust note:** gated behind an explicit redaction check.
 
@@ -197,6 +220,7 @@ Create a `publish` skill, wired to my SCHEMA.md, that emits a safe public subset
 
 ### report-export · outbound* · Connected
 - **Adds:** A polished PDF / report from a topic or query.
+- **Skill:** `/export-report`
 - **Needs:** `pandoc` (+ LaTeX/typst for PDF) · **Secrets:** none.
 - **Trust note:** local; sharing the file is your call.
 
@@ -211,6 +235,7 @@ Create an `export-report` skill, wired to my SCHEMA.md, that renders a topic or 
 
 ### obsidian-vault · local · Connected
 - **Adds:** Colour-coded graph, backlinks, live queries — over the kb and (optionally) the method graph.
+- **Skill:** — (Obsidian vault setup)
 - **Needs:** Obsidian + Dataview plugin · **Secrets:** none.
 - **Trust note:** fully local.
 
@@ -220,6 +245,7 @@ Set up an Obsidian vault so I can browse my knowledge base — and, if I want, t
 
 ### semantic-search · outbound* · Intelligent
 - **Adds:** Fuzzy "where did I see…" retrieval.
+- **Skill:** `/search`
 - **Needs:** an embeddings model + a small vector index · **Secrets:** `EMBEDDINGS_API_KEY` if hosted.
 - **Trust note:** prefer a local model; if hosted, only page text you accept sending leaves.
 
@@ -229,6 +255,7 @@ Create a `search` skill, wired to my SCHEMA.md, that adds fuzzy semantic retriev
 
 ### static-site · local · Connected
 - **Adds:** The wiki viewable at a URL.
+- **Skill:** `/site`
 - **Needs:** a static-site generator or plain HTML + Pages · **Secrets:** none.
 - **Trust note:** local to build; outbound only when actually deployed.
 
@@ -238,11 +265,22 @@ Create a `site` skill, wired to my SCHEMA.md, that renders selected `kb/` pages 
 
 ### chat-over-kb · local · Intelligent
 - **Adds:** Conversational Q&A grounded in your store.
+- **Skill:** `/ask`
 - **Needs:** the agent (+ optional semantic-search) · **Secrets:** none beyond the model.
 - **Trust note:** local retrieval; answers stay grounded.
 
 ```text
 Create an `ask` skill, wired to my SCHEMA.md, that answers natural-language questions grounded in the store. First ask me: whether retrieval should use the exact `kb/index.md` lookup, `semantic-search` if it's installed, or both; and the citation style for answers. Then, for a question, retrieve the most relevant `kb/` pages, answer only from them, cite every page used, and say so plainly when the store doesn't contain the answer — never assert beyond the cited pages. Retrieval is local. Verify by asking a question whose answer is in the store and checking the citations.
+```
+
+### design-system · local · Connected
+- **Adds:** One visual language for **every** generated output — the Basel School (Armin Hofmann) tradition by default.
+- **Skill:** `/design-system` (guided setup)
+- **Needs:** none (writes CSS/token files) · **Secrets:** none.
+- **Trust note:** fully local; it only styles outputs, never sends anything.
+
+```text
+Create a `design-system` setup, wired to my SCHEMA.md, that defines ONE visual language every generated visual output uses **by default** — the core `/healthcheck` report, and any `static-site`, `report-export`, `redacted-publish`, chart or diagram — unless a specific output explicitly opts out. Orient it on the **Basel School of Design (Armin Hofmann)** tradition — read `templates/design/design-system.md` for the principles (the elemental point·line·plane, contrast as the generative force, economy of means, activated white space, black-&-white primacy with a single structural red, no ornament). **Start from the ready-made template in `templates/design/`** (`tokens.css` + `report.html`, Basel defaults) so there's a working design from the first second, then guide me through tuning it as a short, one-question-at-a-time interview, showing a small live preview at each step — and at each step keep the principle in view: (1) **typeface** — default the grotesque (Akzidenz-Grotesk → Helvetica lineage) via a dependency-free system stack, ask if I prefer another; (2) **scale & grid** — a hard-jumping modular scale (so large/small *contrast* reads), an 8px spacing grid, a 12-col latent grid; (3) **colour** — near-black ink on a restrained near-white with **one** structural red (default `#e2231a`), plus muted pass/warn/fail colours so the red stays the only loud voice; (4) **form** — sharp corners (no radius), no shadows/gradients/ornament, flush-left / ragged-right, light large display against bold tracked labels; (5) **light/dark**. Then write the result as a SINGLE source of truth — design tokens as CSS custom properties in `design/tokens.css` (adapted from the template), a `design/design-system.md` documenting the choices against the Basel principles, and the matching self-contained `report.html` shell outputs can **inline** so they stay offline and dependency-free (no external fonts/CDNs — honour local-first). Record in `SCHEMA.md` the convention that **all visual outputs default to the design system unless they state otherwise**, and write a `memory/` fact so future sessions honour it. Fully local. Verify by regenerating one visual output (e.g. run `/healthcheck`) and showing me the before/after — the report should pick up the tokens automatically.
 ```
 
 ---
@@ -251,7 +289,8 @@ Create an `ask` skill, wired to my SCHEMA.md, that answers natural-language ques
 *The store feeds, maintains, and backs up itself.*
 
 ### auto-capture · local · Automated
-- **Adds:** Lessons captured without anyone remembering to.
+- **Adds:** Feeds the core loop automatically — writes `daily/` observations without anyone remembering to (the core `/ingest`/`/query` already do this; this captures *everything else* too).
+- **Skill:** — (session hooks)
 - **Needs:** session-end / pre-compaction hooks · **Secrets:** none.
 - **Trust note:** local.
 
@@ -260,25 +299,28 @@ Create auto-capture hooks, wired to my SCHEMA.md, that record durable lessons wi
 ```
 
 ### compile-memory · local · Automated
-- **Adds:** Daily logs distilled into memory facts **and new tools** (self-arming).
+- **Adds:** **Schedules the core `/compile`** so the self-arming loop (daily logs → memory facts **and new tools**) runs unattended instead of on demand.
+- **Skill:** schedules `/compile`
 - **Needs:** a scheduler + a `compile.py` · **Secrets:** none.
 - **Trust note:** local. Builds on coleam00/claude-memory-compiler.
 
 ```text
-Create a `compile.py`, wired to my SCHEMA.md, that distils the daily logs into the portable brain — and arms it with tools. First ask me: when it should run (e.g. nightly); how aggressively to deduplicate against existing facts; whether new facts and tools are written automatically or staged for my approval; and a threshold for "recurrent" (how many times a task must repeat before it becomes a tool). Then read the `daily/` logs and do two things: (1) extract durable lessons, gotchas and preferences, deduplicate against the existing one-fact files in `memory/`, write new **typed** fact files (frontmatter with `type` — convention/gotcha/solution/preference/procedure — + body), and crucially **cross-link them into the memory graph**: add `[[links]]`/relations (`related`, `solves`, `applies-to` a kb page, `implemented-by` a tool) and `supersede` any fact they make stale, then update `memory/index.md`; (2) detect recurrent tasks, repeated problems, and obvious automations or optimizations, and for each that crosses the threshold, propose or generate a small script into `tools/` and catalogue it in `tools/index.md` (purpose, when to use, how it was derived, and start/stop/status if it runs as a service) — and link the memory fact to the tool with `implemented-by`. This is the self-arming loop: the system builds its own brain and toolbox as it's used. Idempotent — already-compiled days are skipped. Runs unattended and stays local. (Builds on the approach in coleam00/claude-memory-compiler.) Verify by compiling one day's log and reviewing the facts — and any proposed tool — it produced.
+Create a `compile.py`, wired to my SCHEMA.md, that runs the core `/compile` logic on a schedule — distilling the daily logs into the portable brain and arming it with tools, unattended. (The on-demand `/compile` skill already exists; this is its scheduled wrapper.) First ask me: when it should run (e.g. nightly); how aggressively to deduplicate against existing facts; whether new facts and tools are written automatically or staged for my approval; and a threshold for "recurrent" (how many times a task must repeat before it becomes a tool). Then read the `daily/` logs and do two things: (1) extract durable lessons, gotchas and preferences, deduplicate against the existing one-fact files in `memory/`, write new **typed** fact files (frontmatter with `type` — convention/gotcha/solution/preference/procedure — + body), and crucially **cross-link them into the memory graph**: add `[[links]]`/relations (`related`, `solves`, `applies-to` a kb page, `implemented-by` a tool) and `supersede` any fact they make stale, then update `memory/index.md`; (2) detect recurrent tasks, repeated problems, and obvious automations or optimizations, and for each that crosses the threshold, propose or generate a small script into `tools/` and catalogue it in `tools/index.md` (purpose, when to use, how it was derived, and start/stop/status if it runs as a service) — and link the memory fact to the tool with `implemented-by`. This is the self-arming loop: the system builds its own brain and toolbox as it's used. Idempotent — already-compiled days are skipped. Runs unattended and stays local. (Builds on the approach in coleam00/claude-memory-compiler.) Verify by compiling one day's log and reviewing the facts — and any proposed tool — it produced.
 ```
 
 ### scheduled-maintenance · local · Automated
 - **Adds:** Ingests & lints itself on a timer.
+- **Skill:** `/maintain` (scheduled job)
 - **Needs:** cron / launchd · **Secrets:** none.
 - **Trust note:** local.
 
 ```text
-Create a `maintain` job, wired to my SCHEMA.md, that keeps the store healthy on a timer. First ask me: the schedule (e.g. nightly); which steps to run (ingest whatever's in `inbox/`, then `/lint`, and optionally `digest`); and where to write the run summary. Then write the job to `tools/`, **register it on the schedule** (launchd/systemd/cron), and **record it in `tools/index.md` and `amanu.yaml`** with its start, stop and status commands so its run-state is visible. Each run executes the agreed steps and appends a short summary to `kb/log.md`. Fully local. Verify by running the job once by hand, showing the summary line it wrote, and confirming the schedule is registered via its status command.
+Create a `maintain` job, wired to my SCHEMA.md, that keeps the store healthy on a timer. First ask me: the schedule (e.g. nightly); which steps to run (ingest whatever's in `inbox/`, then `/lint`, and optionally `digest`); and where to write the run summary. Then write the job to `tools/`, **register it on the schedule by filling a `templates/schedulers/` template** (launchd/systemd/cron — idempotently, unregister-then-register), and **record it in `tools/index.md` and `amanu.yaml`** with its start, stop and status commands so its run-state is visible. Each run executes the agreed steps, **refreshes a heartbeat** (`tools/maintain.state` `last_ok`), and appends a short summary to `kb/log.md`. Fully local. Verify by running the job once by hand, showing the summary line it wrote, and confirming the schedule is registered **and boot-persistent** via its status command.
 ```
 
 ### encrypted-backup · outbound · Automated
 - **Adds:** Off-machine backup; only ciphertext leaves.
+- **Skill:** `/backup` (scheduled job)
 - **Needs:** a git remote + `age`/`gpg` · **Secrets:** `BACKUP_KEY` (in `.env`, never committed).
 - **Trust note:** outbound, but only ciphertext leaves.
 
@@ -286,13 +328,24 @@ Create a `maintain` job, wired to my SCHEMA.md, that keeps the store healthy on 
 Create a `backup` job, wired to my SCHEMA.md, that backs the store up off-machine without trusting the host with plaintext. First ask me: whether to encrypt with `age` or `gpg`; which remote to push the ciphertext to; the schedule; and how the key is supplied (store the passphrase or key reference as `BACKUP_KEY` in the git-ignored `.env`, never committed). Then encrypt the store and push only the ciphertext to the remote, and verify a test decrypt on each run so a backup is never silently corrupt. It's outbound, but only encrypted bytes leave. Verify by running one backup and confirming the test decrypt succeeds.
 ```
 
+### restore-from-backup · inbound · Automated
+- **Adds:** The recovery counterpart to `encrypted-backup` — rebuilds the store from ciphertext.
+- **Skill:** `/restore`
+- **Needs:** `age`/`gpg` + access to the backup remote · **Secrets:** `BACKUP_KEY` (in `.env`, never committed).
+- **Trust note:** inbound; pulls only your own ciphertext, decrypts locally, sends nothing.
+
+```text
+Create a `restore` job, wired to my SCHEMA.md, that rebuilds the store from an `encrypted-backup`. First ask me: which backup remote/snapshot to restore from (latest, or a chosen point in time if the remote keeps history); whether to restore into a **fresh directory** for inspection (default, safest) or in place; and how the key is supplied (`BACKUP_KEY` from the git-ignored `.env`, matching the backup job). Then fetch the chosen ciphertext, decrypt it locally with `age`/`gpg`, and lay the files out — never overwriting an existing store in place without an explicit confirm and a diff of what would change. After restoring, run `/healthcheck` so I can see the recovered system is intact. It pulls only my own ciphertext and sends nothing. Verify by restoring the latest snapshot into a scratch folder and confirming the file count and a sample page match.
+```
+
 ### watch-inbox · local · Automated
 - **Adds:** Ingest fires the moment a source lands.
+- **Skill:** — (`watch-inbox` background service)
 - **Needs:** a filesystem watcher (`fswatch` / inotify) · **Secrets:** none.
 - **Trust note:** local.
 
 ```text
-Create a `watch-inbox` tool, wired to my SCHEMA.md, that ingests the moment a file lands. First ask me: which watcher to use (`fswatch`/inotify) or whether to fall back to a short poll; whether to first run `ingest-email` and `sync-drive` to gather remote sources; and a debounce window so a burst of files is handled as one batch. Then write the watcher to `tools/`, and — because a created script that never runs is useless — **register it to start automatically** (launchd on macOS, systemd/cron on Linux), **start it now**, and **record it in `tools/index.md` and `amanu.yaml`** with its start, stop and status commands. It watches `inbox/` and triggers `/ingest` on new files after the optional gather step. Fully local. Verify by running its **status** command to confirm it's actually running, then dropping a file in `inbox/` and watching the ingest fire.
+Create a `watch-inbox` tool, wired to my SCHEMA.md, that ingests the moment a file lands. First ask me: which watcher to use (`fswatch`/inotify) or whether to fall back to a short poll; whether to first run `ingest-email` and `sync-drive` to gather remote sources; and a debounce window so a burst of files is handled as one batch. Then write the watcher to `tools/`, and — because a created script that never runs is useless — **register it to start automatically by filling a `templates/schedulers/` template** (launchd on macOS, systemd/cron on Linux; idempotently, unregister-then-register), **start it now**, have it **refresh a heartbeat** (`tools/watch-inbox.state` `last_ok`) each time it fires, and **record it in `tools/index.md` and `amanu.yaml`** with its start, stop and status commands. It watches `inbox/` and triggers `/ingest` on new files after the optional gather step. Fully local. Verify by running its **status** command to confirm it's actually running **and boot-persistent** (on macOS flag that a watcher may need Full Disk Access), then dropping a file in `inbox/` and watching the ingest fire.
 ```
 
 ---
@@ -302,6 +355,7 @@ Create a `watch-inbox` tool, wired to my SCHEMA.md, that ingests the moment a fi
 
 ### sub-agents · local · Intelligent
 - **Adds:** Task-focused agents over a slice of the store.
+- **Skill:** — (sub-agent definitions)
 - **Needs:** the agent platform's sub-agent mechanism · **Secrets:** none.
 - **Trust note:** local.
 
@@ -311,6 +365,7 @@ Define specialised sub-agents, wired to my SCHEMA.md, each scoped to a slice of 
 
 ### contradiction-detector · local · Intelligent
 - **Adds:** Catches two pages that disagree on one fact.
+- **Skill:** `/check-contradictions`
 - **Needs:** the agent (+ optional semantic-search) · **Secrets:** none.
 - **Trust note:** local.
 
@@ -320,6 +375,7 @@ Create a `check-contradictions` skill, wired to my SCHEMA.md, that finds pages d
 
 ### source-reconciliation · local · Intelligent
 - **Adds:** Cross-checks the synthesis against its sources.
+- **Skill:** `/reconcile`
 - **Needs:** the agent · **Secrets:** none.
 - **Trust note:** local.
 
@@ -329,6 +385,7 @@ Create a `reconcile` skill, wired to my SCHEMA.md, that checks the synthesis aga
 
 ### entity-dedup · local · Intelligent
 - **Adds:** Merges duplicate entity pages.
+- **Skill:** `/entity-dedup`
 - **Needs:** the agent · **Secrets:** none.
 - **Trust note:** local.
 
@@ -338,11 +395,22 @@ Create an `entity-dedup` script, wired to my SCHEMA.md, that finds and merges du
 
 ### frontmatter-lint · local · Automated
 - **Adds:** Guarantees every page carries its metadata.
+- **Skill:** `/frontmatter-lint`
 - **Needs:** a small validator script · **Secrets:** none.
 - **Trust note:** local.
 
 ```text
 Create a `frontmatter-lint` script, wired to my SCHEMA.md, that guarantees every page carries its required metadata. First ask me: the required fields per page type (defaulting to what SCHEMA.md specifies); whether to also check the `memory/` graph (every fact has a valid `type`, and no `[[links]]` are dangling); and whether it should only report violations or also offer to fix the safe ones (e.g. fill a missing date from the file). Then validate the frontmatter on every `kb/` page — and, if asked, every `memory/` fact — and report violations grouped by file, applying fixes only where I allowed. Fully local. Verify by running it and reviewing the report.
+```
+
+### dead-link-auditor · local · Automated
+- **Adds:** Finds broken `[[wiki-links]]` across the store before they rot the graph.
+- **Skill:** `/check-links`
+- **Needs:** a small link-graph script · **Secrets:** none.
+- **Trust note:** fully local.
+
+```text
+Create a `check-links` script, wired to my SCHEMA.md, that audits the `[[wiki-links]]` graph for breakage. First ask me: whether to check `kb/` only or also the `memory/` method graph; how to treat a link to a page that doesn't exist yet (a deliberate stub vs a typo — offer to list both separately); and whether to also flag *orphans* (pages with no inbound links). Then resolve every `[[link]]` (and frontmatter `related`/`applies-to`/`implemented-by` targets) against the files on disk, and write a report to `kb/queries/` grouping: broken links (target missing), likely typos (near-match to an existing page), and orphans — each with the file and line. It proposes, never auto-edits. Fully local. Verify by running it and reviewing the grouped report.
 ```
 
 ---

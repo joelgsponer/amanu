@@ -1,0 +1,16 @@
+# amanu systemd template → ~/.config/systemd/user/{{LABEL}}.service
+# A oneshot run; the paired {{LABEL}}.timer schedules it. For a long-running
+# watcher instead, set Type=simple and drop the timer (enable the .service).
+# The script must refresh its heartbeat ({{STATE}}) on each successful run.
+[Unit]
+Description=amanu {{LABEL}}
+
+[Service]
+Type=oneshot
+WorkingDirectory={{WORKDIR}}
+ExecStart={{CMD}} {{ARGS}}
+StandardOutput=append:{{LOG}}
+StandardError=append:{{LOG}}
+
+[Install]
+WantedBy=default.target

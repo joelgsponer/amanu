@@ -1,0 +1,11 @@
+schema_version: 1
+tier: starter            # starter | connected | automated | intelligent
+last_phase: P10          # resume point (build complete)
+depth: guided            # quick | guided | thorough
+categories: [clients, invoices, contracts, taxes, admin]
+entities: [acme, self]
+skills: [ingest, query, lint, compile, healthcheck]
+extensions: []           # none added yet — pure Starter
+credentials: []          # env-var NAMES only, never values
+tools: []                # no background services at Starter tier
+privacy: local-first

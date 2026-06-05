@@ -376,24 +376,36 @@ Each phase runs the six beats. Adapt wording; hit every beat; honour *Done when*
 - **TEACH** — the synthesis, not re-reading raw files, answers questions.
 - **TAILOR** — ask a real question the new source can answer.
 - **BUILD** — answer by reading `kb/index.md` then the relevant pages; cite them;
-  offer to save to `kb/queries/`.
+  offer to save to `kb/queries/`; append a one-line observation to today's
+  `daily/` log (what was asked, which pages answered it, any gap noticed) — this
+  is what feeds `/compile`.
 - **VERIFY** — confirm the answer is grounded in cited pages.
 - **CHECKPOINT** — "retrieval works end to end — see how it used the wiki?"
 - **LOG** — `P6 · first query`.
 - **Done when:** a cited answer is produced from the synthesis.
 
-### P7 · Build the chosen skills
-- **TEACH** — skills turn the recipes into one-word commands; build only what was
-  chosen.
+### P7 · Build the core skills *(+ the self-arming loop)*
+- **TEACH** — skills turn the recipes into one-word commands. The five core skills
+  are `/ingest`, `/query`, `/lint`, **`/compile`** (distils `daily/` → `memory/`
+  facts + `tools/` scripts — the on-demand self-arming loop), and
+  **`/healthcheck`** (audits the running system and writes an HTML report —
+  *machinery*, where `/lint` checks *content*).
 - **TAILOR** — reconfirm the skill list; pick the next one.
-- **BUILD** — scaffold each chosen skill from its build prompt, wired to
-  `SCHEMA.md`. Confirm each file. Then **refresh `AGENTS.md`/`CLAUDE.md`** so they
-  list the new commands.
-- **VERIFY** — dry-run at least `/ingest` and `/query` (smoke test).
-- **CHECKPOINT** — "your core commands exist and run — good?"
-- **LOG** — `P7 · built skills: […]`.
-- **Done when:** each chosen skill exists, its smoke test passes, and the agent
-  entrypoints list it.
+- **BUILD** — scaffold each skill from its recipe in `SCHEMA.md`, wired to the
+  conventions. Confirm each file. For `/compile`, reuse the on-demand core of the
+  `compile-memory` build prompt; for `/healthcheck`, build the system audit that
+  renders a self-contained (inline-CSS, no external assets) HTML report to
+  `reports/healthcheck-YYYY-MM-DD.html`, **styled from `templates/design/`** (the
+  Swiss design template — or the user's `design/` tokens if `design-system` is added). Then **refresh `AGENTS.md`/`CLAUDE.md`**
+  so they list the new commands (as a `- /name — one-line` list).
+- **VERIFY** — smoke-test `/ingest` and `/query`; then **close the loop once**:
+  run `/compile` over the P5/P6 `daily/` entries and confirm it produced at least
+  one `memory/` fact or `tools/` script; run `/healthcheck` and open the report.
+- **CHECKPOINT** — "your core commands run, the loop closed once, and the system
+  can check itself — good?"
+- **LOG** — `P7 · built core skills: ingest query lint compile healthcheck`.
+- **Done when:** each core skill exists and smoke-tests; `/compile` has distilled
+  ≥1 fact/tool; `/healthcheck` produced a report; entrypoints list all five.
 
 ### P8 · Wire the chosen extensions
 - **TEACH** — extensions attach at the edges; restate the **trust boundary**
@@ -403,33 +415,51 @@ Each phase runs the six beats. Adapt wording; hit every beat; honour *Done when*
   `.env.example` and the user has filled `.env`).
 - **BUILD** — scaffold each from its **`extensions.md` build prompt**, wired to
   `SCHEMA.md`; load any secrets from `.env`. For any **background tool** (watcher,
-  scheduler), don't stop at creating the script: **register it to autostart**
-  (launchd/systemd/cron per the preflight OS), **start it**, and **record it in
-  `tools/index.md` and the manifest** with its start/stop/status commands. Raise
-  `tier` as extensions come online, and **refresh `AGENTS.md`/`CLAUDE.md`** with
-  the new commands.
+  scheduler), don't stop at creating the script: **register it to autostart by
+  filling a `templates/schedulers/` template** (launchd plist / systemd
+  service+timer / crontab per the preflight OS — with a log path and, for launchd,
+  `RunAtLoad`), **start it**, have it **write a heartbeat** on each run, and
+  **record it in `tools/index.md` and the manifest** with its start/stop/status
+  commands. (Re-)register idempotently — unregister-then-register — so a re-run
+  never double-loads. Raise `tier` as extensions come online, and **refresh
+  `AGENTS.md`/`CLAUDE.md`** with the new commands.
+  - **On failure** — if an extension won't scaffold or a service won't start,
+    **stop and report it**, then offer to (a) **retry**, (b) **skip and continue**
+    with the next extension, or (c) **abort and roll back** this extension's
+    changes. Never leave a half-wired extension recorded as live in the manifest.
 - **VERIFY** — demonstrate each wired extension once (idempotent re-run); for a
-  background tool, run its **status** command and show it is actually running.
-- **CHECKPOINT** — "each integration you wanted is proven and (where it's a
-  service) actually running — anything missing?"
-- **LOG** — `P8 · wired extensions: […] · services running · tier=<…>`.
+  background tool, run its **status** command, show it is actually running, **and
+  confirm it is boot-persistent** (plist has `RunAtLoad` / unit is `enabled` / cron
+  line present) — running now isn't enough. Then run `/healthcheck` and confirm the
+  service shows green.
+- **CHECKPOINT** — "each integration you wanted is proven, boot-persistent where
+  it's a service, and green in `/healthcheck` — anything missing?"
+- **LOG** — `P8 · wired extensions: […] · services running+persistent · tier=<…>`.
 - **Done when:** each chosen extension runs once successfully; **every background
-  tool is registered, started, and reports `running` via its status command**;
-  `tools/index.md` + manifest list them; entrypoints updated; no secret values in
-  any tracked file.
+  tool is registered, started, boot-persistent, writing a heartbeat, and reports
+  `running` via its status command**; `tools/index.md` + manifest list them;
+  entrypoints updated; `/healthcheck` is green; no secret values in any tracked file.
 
-### P9 · Lint + self-document
-- **TEACH** — a health pass keeps the store honest; then the system explains
-  itself to your future self.
+### P9 · Lint, health-check + self-document
+- **TEACH** — two passes keep things honest: `/lint` checks the *content* (the
+  store), `/healthcheck` checks the *machinery* (the running system). Then the
+  system explains itself to your future self.
 - **TAILOR** — confirm lint scope and that a `README` is wanted.
-- **BUILD** — run the lint recipe (contradictions, orphans, staleness, missing
-  links, gaps) → dated report in `kb/queries/`. Generate `README.md` (what it is,
-  how to use the skills, decisions — summarised from `CHANGELOG.log`). Confirm
-  `CLAUDE.md`/`AGENTS.md` reflect the final skill + extension set.
-- **VERIFY** — review the lint report and the README together.
-- **CHECKPOINT** — "the system documents itself now — does the README read right?"
-- **LOG** — `P9 · lint + README`.
-- **Done when:** a lint report exists and `README.md` describes the live system.
+- **BUILD** — run `/lint` (contradictions, orphans, staleness, missing links,
+  gaps) → dated report in `kb/queries/`. Run `/healthcheck` → HTML report in
+  `reports/`, confirming the system is green (manifest matches reality, services
+  running + persistent, secrets fenced). Fill **`kb/overview.md`** with a short
+  in-folder scope/dashboard (what this KB covers, its categories and key
+  entities). Generate `README.md` (what it is, how to use the skills, decisions —
+  summarised from `CHANGELOG.log`). Confirm `CLAUDE.md`/`AGENTS.md` reflect the
+  final skill + extension set.
+- **VERIFY** — review the lint report, the health-check report, and the README
+  together.
+- **CHECKPOINT** — "the system documents and checks itself now — does it read
+  right and report green?"
+- **LOG** — `P9 · lint + healthcheck + README`.
+- **Done when:** a lint report and a green `/healthcheck` report exist,
+  `kb/overview.md` is filled, and `README.md` describes the live system.
 
 ### P10 · Handoff
 - **TEACH** — recap the whole system in plain words: the two memories (the
@@ -437,12 +467,20 @@ Each phase runs the six beats. Adapt wording; hit every beat; honour *Done when*
   run-state, the machine-memory split (so the folder is portable), folders,
   skills, extensions, and tier.
 - **TAILOR** — ask what they want to do first on their own.
-- **BUILD** — optionally a first `git commit` of the built system; set
+- **BUILD** — **automatically run `/healthcheck` as the final acceptance gate** —
+  every build ends with a full self-audit — and present the fresh
+  `reports/healthcheck-YYYY-MM-DD.html` to the user. If it isn't green, walk the
+  flagged items, fix them (or log them as known gaps with the user's OK), and
+  re-run until it passes. Then a first `git commit` of the built system; set
   `last_phase: P10` in the manifest.
-- **VERIFY** — walk `CHANGELOG.log` top to bottom together.
-- **CHECKPOINT** — confirm they can run an ingest and a query unaided.
-- **LOG** — `P10 · handoff · system live · tier=<…>`.
-- **Done when:** the overall definition of done (§D) holds.
+- **VERIFY** — open the green health-check report and walk `CHANGELOG.log` top to
+  bottom together.
+- **CHECKPOINT** — confirm they can run an ingest and a query unaided, and that the
+  final `/healthcheck` reports green.
+- **LOG** — `P10 · handoff · system live · healthcheck=green · tier=<…>`.
+- **Done when:** the overall definition of done (§D) holds **and the build's final
+  automatic `/healthcheck` is green** (or its residual items are logged and
+  accepted).
 
 ---
 

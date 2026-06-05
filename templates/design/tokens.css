@@ -1,0 +1,68 @@
+/*
+  amanu design tokens — the Basel School / Armin Hofmann tradition.
+  Grounded in Hofmann's "Graphic Design Manual" (1965): form built from the
+  elemental (point · line · plane), animated by CONTRAST, reduced to the economy
+  of means, with activated white space and black-&-white primacy + a single
+  structural red. No ornament, no rounded corners, no shadows, no gradients.
+
+  The single source of truth for every generated visual output (the /healthcheck
+  report, static sites, exported reports). Self-contained: a system font stack,
+  no external fonts or CDNs (local-first). The `design-system` extension lets the
+  user tune these; outputs inline this file so they stay offline & dependency-free.
+  See design-system.md for the principles each token group serves.
+*/
+:root {
+  /* TYPOGRAPHY AS FORM — the grotesque (Akzidenz-Grotesk → Helvetica lineage),
+     treated as both message and abstract texture. Dependency-free system stack. */
+  --font-sans: "Helvetica Neue", "Helvetica", "Inter", Arial, system-ui, sans-serif;
+  --font-mono: "SF Mono", "JetBrains Mono", Menlo, ui-monospace, monospace;
+
+  /* CONTRAST — large/small and light/bold are generative, so the scale jumps hard
+     and weight is paired deliberately (light display against regular body). */
+  --fs-xs: 0.78rem;  --fs-sm: 0.875rem; --fs-base: 1rem;
+  --fs-lg: 1.333rem; --fs-xl: 1.777rem; --fs-2xl: 2.369rem; --fs-display: 3.157rem;
+  --lh-tight: 1.05;  --lh-base: 1.5;
+  --fw-light: 300; --fw-regular: 400; --fw-medium: 500; --fw-bold: 700;
+  --track-caps: 0.16em;     /* tracked grotesque caps for labels/kickers */
+
+  /* ELEMENTAL: POINT · LINE · PLANE — three rule weights stand for the three
+     building blocks. Hairline = line; structural = a drawn edge; plane = a solid
+     band/border that reads as mass. */
+  --w-hair: 1px;            /* line */
+  --w-rule: 2px;            /* structural edge */
+  --w-plane: 4px;           /* plane / mass */
+  --line: #d7d5cd;          /* hairline colour (neutral, not decorative) */
+
+  /* ECONOMY OF MEANS — sharp corners, no radius, nothing superfluous. */
+  --radius: 0;
+
+  /* ACTIVATED WHITE SPACE — negative space is a working element; spacing is
+     generous and on a strict 8px grid. */
+  --s-1: 4px; --s-2: 8px; --s-3: 16px; --s-4: 24px; --s-5: 40px; --s-6: 64px; --s-8: 96px;
+  --grid-cols: 12;
+  --measure: 66ch;          /* max line length — flush-left, ragged-right */
+
+  /* BLACK-&-WHITE PRIMACY + ONE STRUCTURAL RED — colour is functional and sparing,
+     never decoration. */
+  --ink: #0a0a0a;           /* near-black */
+  --ink-soft: #565656;
+  --paper: #f6f5f1;         /* restrained near-white */
+  --panel: #ffffff;
+  --accent: #e2231a;        /* a single Basel red — used structurally, not to decorate */
+  --accent-ink: #ffffff;
+
+  /* Semantic — report pass/warn/fail. Muted so the red stays the only loud colour. */
+  --ok: #1f7a3d;   --ok-bg: #eaf2ec;
+  --warn: #8a6400; --warn-bg: #f4eedd;
+  --fail: var(--accent); --fail-bg: #fae7e5;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #f2f0ea; --ink-soft: #a6a39b;
+    --paper: #0c0c0b; --panel: #161513; --line: #2c2b27;
+    --ok: #5fcf83; --ok-bg: #15241a;
+    --warn: #d9ab3c; --warn-bg: #271f0e;
+    --fail-bg: #2a1312;
+  }
+}
