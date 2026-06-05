@@ -235,6 +235,16 @@
   .catalog-cta{display:flex;align-items:center;gap:12px;border:1px solid var(--rule-strong);border-left:3px solid var(--indigo);border-radius:0 10px 10px 0;background:var(--paper-2);padding:14px 18px;margin:20px 0;font-size:14px}
   .catalog-cta a{font-weight:650}
 
+  /* full catalog tables */
+  .cathead{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--indigo);margin:26px 0 6px;font-weight:700}
+  table.catalog{margin:6px 0 4px}
+  table.catalog td{font-size:13px;vertical-align:middle}
+  table.catalog td:first-child{font-family:var(--mono);font-size:12.5px;color:var(--ink);font-weight:600;white-space:nowrap}
+  table.catalog td:last-child{font-family:var(--mono);font-size:11px;color:var(--ink-faint)}
+  .pill.in{background:var(--teal-soft);color:var(--teal)}
+  .pill.out{background:var(--indigo-soft);color:var(--indigo)}
+  .pill.loc{background:var(--slate-soft);color:var(--slate)}
+
   @media(max-width:880px){.catgrid{grid-template-columns:1fr 1fr}.tierladder{grid-template-columns:1fr 1fr}}
 
   footer{border-top:1px solid var(--rule-strong);background:var(--paper-2);padding:30px 0 50px}
@@ -594,16 +604,58 @@ Related: <span class="l">[[ingest-workflow]]</span></pre>
         <span class="t loc"><b>local</b> — no network at all</span>
       </div>
 
-      <h3>Five categories</h3>
-      <div class="catgrid">
-        <div class="catcard"><h4>Inbound</h4><p class="ex">Feed the store: email, drive-sync, scan-OCR, web-clipper, audio→transcript, calendar, CSV/financial.</p><span class="tc">inbound</span></div>
-        <div class="catcard"><h4>Outbound</h4><p class="ex">Get value out: deep-research, digest, calendar-push, task export, redacted publish, PDF report.</p><span class="tc">outbound</span></div>
-        <div class="catcard"><h4>Interface</h4><p class="ex">Browse &amp; ask: Obsidian vault, semantic search, static site, chat-over-KB.</p><span class="tc">local / outbound</span></div>
-        <div class="catcard"><h4>Automation</h4><p class="ex">Keep it alive: auto-capture hooks, compile loop, scheduled maintenance, encrypted backup, watch-inbox.</p><span class="tc">local / outbound</span></div>
-        <div class="catcard"><h4>Intelligence</h4><p class="ex">Reason over it: sub-agents, contradiction &amp; reconciliation checks, entity-dedup, frontmatter-lint.</p><span class="tc">local</span></div>
-      </div>
+      <h3>The full catalog — 28 extensions, five categories</h3>
+      <p>Everything the build agent can offer you, by category. Each row is a <code>name · trust · tier</code>; the build prompt and the exact secrets each needs live in <a class="inl" href="extensions.md">extensions.md</a>.</p>
 
-      <div class="catalog-cta">📖&nbsp; The full catalog — ~25 extensions, each with a build prompt, trust class, and the secrets it needs — lives in <a class="inl" href="extensions.md">extensions.md</a>. The build agent reads it to offer you a menu.</div>
+      <p class="cathead">Inbound — feed the store</p>
+      <table class="catalog"><tbody>
+        <tr><td>email</td><td>A Gmail label becomes an automatic source feed.</td><td><span class="pill in">inbound</span></td><td>Connected</td></tr>
+        <tr><td>drive-sync</td><td>A cloud folder (Drive, Dropbox…) mirrors into <code>inbox/</code>.</td><td><span class="pill in">inbound</span></td><td>Connected</td></tr>
+        <tr><td>scan-ocr</td><td>Scans and photos become searchable text sources.</td><td><span class="pill in">inbound</span></td><td>Connected</td></tr>
+        <tr><td>web-clipper</td><td>A URL → a clean Markdown source page.</td><td><span class="pill in">inbound</span></td><td>Connected</td></tr>
+        <tr><td>audio-transcribe</td><td>Voice memos / meeting audio become text sources.</td><td><span class="pill in">inbound</span></td><td>Connected</td></tr>
+        <tr><td>calendar-pull</td><td>Calendar events become dated context.</td><td><span class="pill in">inbound</span></td><td>Connected</td></tr>
+        <tr><td>csv-import</td><td>Tabular / financial exports become structured sources.</td><td><span class="pill in">inbound</span></td><td>Connected</td></tr>
+        <tr><td>messaging-export</td><td>Exported chat threads become sources.</td><td><span class="pill in">inbound</span></td><td>Connected</td></tr>
+      </tbody></table>
+
+      <p class="cathead">Outbound — get value out</p>
+      <table class="catalog"><tbody>
+        <tr><td>deep-research</td><td>Verified, cited external research folded into the store.</td><td><span class="pill out">outbound</span></td><td>Connected</td></tr>
+        <tr><td>digest</td><td>A periodic "what changed / what needs action" summary.</td><td><span class="pill out">outbound*</span></td><td>Connected</td></tr>
+        <tr><td>calendar-push</td><td>Document deadlines &amp; actions become calendar events.</td><td><span class="pill out">outbound</span></td><td>Connected</td></tr>
+        <tr><td>task-export</td><td>Open items become reminders / tasks.</td><td><span class="pill out">outbound</span></td><td>Connected</td></tr>
+        <tr><td>redacted-publish</td><td>A safe, public subset as a static site.</td><td><span class="pill out">outbound</span></td><td>Intelligent</td></tr>
+        <tr><td>report-export</td><td>A polished PDF / report from a topic or query.</td><td><span class="pill out">outbound*</span></td><td>Connected</td></tr>
+      </tbody></table>
+
+      <p class="cathead">Interface — browse &amp; ask</p>
+      <table class="catalog"><tbody>
+        <tr><td>obsidian-vault</td><td>Graph view, backlinks, live frontmatter queries over <code>kb/</code>.</td><td><span class="pill loc">local</span></td><td>Connected</td></tr>
+        <tr><td>semantic-search</td><td>Fuzzy "where did I see…" retrieval beyond exact queries.</td><td><span class="pill out">outbound*</span></td><td>Intelligent</td></tr>
+        <tr><td>static-site</td><td>The overview / wiki viewable at a URL.</td><td><span class="pill loc">local</span></td><td>Connected</td></tr>
+        <tr><td>chat-over-kb</td><td>Conversational Q&amp;A grounded in your store.</td><td><span class="pill loc">local</span></td><td>Intelligent</td></tr>
+      </tbody></table>
+
+      <p class="cathead">Automation — keep it alive</p>
+      <table class="catalog"><tbody>
+        <tr><td>auto-capture</td><td>Durable lessons captured via session hooks.</td><td><span class="pill loc">local</span></td><td>Automated</td></tr>
+        <tr><td>compile-memory</td><td>Daily logs distilled into agent-memory facts on a schedule.</td><td><span class="pill loc">local</span></td><td>Automated</td></tr>
+        <tr><td>scheduled-maintenance</td><td>The store ingests and lints itself on a timer.</td><td><span class="pill loc">local</span></td><td>Automated</td></tr>
+        <tr><td>encrypted-backup</td><td>Off-machine backup; only ciphertext leaves.</td><td><span class="pill out">outbound</span></td><td>Automated</td></tr>
+        <tr><td>watch-inbox</td><td>Ingest fires the moment a source lands.</td><td><span class="pill loc">local</span></td><td>Automated</td></tr>
+      </tbody></table>
+
+      <p class="cathead">Intelligence — reason over the store</p>
+      <table class="catalog"><tbody>
+        <tr><td>sub-agents</td><td>Task-focused agents scoped to a slice of the store.</td><td><span class="pill loc">local</span></td><td>Intelligent</td></tr>
+        <tr><td>contradiction-detector</td><td>Catches two pages asserting different things about one fact.</td><td><span class="pill loc">local</span></td><td>Intelligent</td></tr>
+        <tr><td>source-reconciliation</td><td>Cross-checks the synthesis against its raw sources.</td><td><span class="pill loc">local</span></td><td>Intelligent</td></tr>
+        <tr><td>entity-dedup</td><td>Merges duplicate entity pages (same thing, different names).</td><td><span class="pill loc">local</span></td><td>Intelligent</td></tr>
+        <tr><td>frontmatter-lint</td><td>Guarantees every page carries its required metadata.</td><td><span class="pill loc">local</span></td><td>Automated</td></tr>
+      </tbody></table>
+
+      <div class="catalog-cta">📖&nbsp; Each row's <strong>build prompt</strong> and required <strong>secrets</strong> live in <a class="inl" href="extensions.md">extensions.md</a> — the build agent reads it to offer you this menu. <code>*</code> = trust depends how you wire it.</div>
 
       <h3>Maturity tiers</h3>
       <p>The catalog maps onto a growth path, so you adopt capability in stages — the build delivers <strong>Starter</strong> by default, and every extension you add raises the tier your manifest records.</p>
@@ -614,7 +666,7 @@ Related: <span class="l">[[ingest-workflow]]</span></pre>
         <div class="tier"><span class="n">TIER 4</span><h4>Intelligent</h4><p>Reasons over itself — sub-agents, search, reconciliation.</p></div>
       </div>
 
-      <h3>Three exemplars — one per trust class</h3>
+      <h3>Spotlight — one per trust class, in detail</h3>
       <div class="ext">
         <div class="extcard gog">
           <div class="ic">G</div>
