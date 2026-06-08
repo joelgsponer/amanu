@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- amanu launchd TIMER template → ~/Library/LaunchAgents/{{LABEL}}.plist
+     For a PERIODIC one-shot job (scheduled-maintenance, compile-memory,
+     encrypted-backup). Runs on a calendar schedule; NO KeepAlive (that would
+     respawn a one-shot forever). RunAtLoad catches a run missed while logged out
+     is NOT guaranteed — launchd coalesces missed StartCalendarInterval runs into
+     one at next wake. The invoked {{CMD}} must refresh its heartbeat ({{STATE}}).
+     Replace the StartCalendarInterval keys with your schedule (example: 02:00 daily). -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>            <string>{{LABEL}}</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>{{CMD}}</string>
+        <string>{{ARGS}}</string>
+    </array>
+    <key>WorkingDirectory</key> <string>{{WORKDIR}}</string>
+    <!-- Schedule: edit Hour/Minute (example below = 02:00 daily). Add a Weekday
+         key for weekly, or repeat the dict in an <array> for several times a day. -->
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>    <integer>2</integer>
+        <key>Minute</key>  <integer>0</integer>
+    </dict>
+    <key>StandardOutPath</key>  <string>{{LOG}}</string>
+    <key>StandardErrorPath</key><string>{{LOG}}</string>
+</dict>
+</plist>

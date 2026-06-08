@@ -8,4 +8,5 @@ skills: [ingest, query, lint, compile, healthcheck]
 extensions: []           # none added yet — pure Starter
 credentials: []          # env-var NAMES only, never values
 tools: []                # no background services at Starter tier
+design: basel-default    # basel-default | custom
 privacy: local-first

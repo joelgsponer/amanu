@@ -18,7 +18,7 @@
     --panel:#ffffff;
     --ink:#0a0a0a;           /* near-black */
     --ink-soft:#565656;
-    --ink-faint:#8a8a86;
+    --ink-faint:#6b6b67;     /* darkened for WCAG AA on small text (~4.6:1 on --bg) */
     --rule:#d7d5cd;          /* hairline (line) */
     --rule-strong:#0a0a0a;   /* structural edge / plane (ink) */
     --accent:#e2231a;        /* the single Basel red — structural, never decorative */
@@ -35,6 +35,19 @@
     --sans:"Helvetica Neue","Helvetica","Inter",Arial,system-ui,sans-serif;
     --mono:"SF Mono",ui-monospace,"Cascadia Mono","Roboto Mono",Menlo,Consolas,monospace;
     --shadow:none;
+  }
+  /* Dark mode — dogfoods templates/design/tokens.css dark block. */
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0c0c0b; --bg-alt:#141310; --panel:#161513;
+      --ink:#f2f0ea; --ink-soft:#a6a39b; --ink-faint:#9a978f;
+      --rule:#2c2b27; --rule-strong:#f2f0ea; --gold:#f2f0ea;
+      --in:#5fcf83; --out:#d9ab3c; --loc:#8fa0b3; --ink-rev:#0c0c0b;
+    }
+    nav.bar{background:rgba(12,12,11,.9)}
+    code{color:#f0857c}
+    .tree,.prompt pre{border:1px solid var(--rule)}   /* delineate near-black blocks on the dark page */
+    ::selection{background:#5a1512}
   }
   *{box-sizing:border-box}
   html{scroll-behavior:smooth}
@@ -143,6 +156,7 @@
   .catgroup .gh{font-family:var(--sans);font-size:12.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);font-weight:700;margin:0 0 4px}
   .catgroup .gd{font-size:14px;color:var(--ink-faint);margin:0 0 14px}
 
+  /* margin:0 0 -1px collapses adjacent 1px borders into one shared hairline, so the catalogue reads as a single ruled ledger (Basel: line as structure). */
   details.ext{background:var(--panel);border:1px solid var(--rule);border-radius:0;margin:0 0 -1px;box-shadow:none;overflow:hidden}
   details.ext[open]{box-shadow:none;border-color:var(--ink)}
   details.ext summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px;padding:15px 18px}
@@ -334,7 +348,7 @@
     </div>
     <details class="ext"><summary><span class="caret">▸</span><span class="nm">email</span><span class="adds">A Gmail label becomes an automatic source feed.</span><span class="pill in">inbound</span><span class="tier">Connected</span></summary>
       <div class="body"><p class="meta"><b>Invoke:</b> `/ingest-email` &nbsp;·&nbsp; <b>Needs:</b> gog (Google Workspace CLI) &nbsp;·&nbsp; <b>Secrets:</b> none — gog uses its own OAuth login.</p>
-      <div class="prompt"><button class="copy" onclick="amanuCopy(this)">Copy prompt</button><pre><code>Create an `ingest-email` skill, wired to my SCHEMA.md, that turns a Gmail label into an automatic source feed. First ask me: which label marks messages to ingest (suggest `ingest-pending`); whether to file the message body as its own source page or only the attachments; and what to do with a message once handled — relabel it (suggest `ingest-done`), archive it, or leave it. Then, for each matching message oldest-first, write the body to `kb/sources/` with sender, subject and date in frontmatter, download every attachment into `inbox/`, run `/ingest` over the new files, and apply the agreed post-step. Use `gog` (its own OAuth login — no API key). Keep it pull-only (never reply, forward, or send), idempotent (record processed message IDs and skip anything already handled), and resilient (on any failure leave the message's label untouched so the next run retries it). Before processing the batch, show me the first message it would file and confirm; verify by running once and opening the resulting source page together.</code></pre></div>
+      <div class="prompt"><button class="copy" onclick="amanuCopy(this)">Copy prompt</button><pre><code>Create an `ingest-email` skill, wired to my SCHEMA.md, that turns a Gmail label into an automatic source feed. First ask me: which label marks messages to ingest (suggest `ingest-pending`); whether to file the message body as its own source page or only the attachments; and what to do with a message once handled — relabel it (suggest `ingest-done`), archive it, or leave it. Then, for each matching message oldest-first, write the body to `kb/sources/` with sender, subject and date in frontmatter, download every attachment into `inbox/`, run `/ingest` over the new files, and apply the agreed post-step. Use `gog` (its own OAuth login — no API key), **not the Google MCP**, even if an MCP is available. Keep it pull-only (never reply, forward, or send), idempotent (record processed message IDs and skip anything already handled), and resilient (on any failure leave the message's label untouched so the next run retries it). Before processing the batch, show me the first message it would file and confirm; verify by running once and opening the resulting source page together.</code></pre></div>
       <p class="trust">Trust — never sends, replies, or forwards.</p></div>
     </details>
     <details class="ext"><summary><span class="caret">▸</span><span class="nm">drive-sync</span><span class="adds">A cloud folder mirrors into the inbox.</span><span class="pill in">inbound</span><span class="tier">Connected</span></summary>
@@ -364,18 +378,18 @@
     </details>
     <details class="ext"><summary><span class="caret">▸</span><span class="nm">csv-import</span><span class="adds">Tabular &amp; financial exports become structured sources.</span><span class="pill in">inbound</span><span class="tier">Connected</span></summary>
       <div class="body"><p class="meta"><b>Invoke:</b> `/import-csv` &nbsp;·&nbsp; <b>Needs:</b> a CSV parser (built-in) &nbsp;·&nbsp; <b>Secrets:</b> none.</p>
-      <div class="prompt"><button class="copy" onclick="amanuCopy(this)">Copy prompt</button><pre><code>Create an `import-csv` skill, wired to my SCHEMA.md, that turns spreadsheets and CSV/financial exports into structured sources. First ask me: which category these belong to; the delimiter and encoding if non-standard; which columns map to which fields (show me the detected header row and let me confirm the mapping); and whether each row becomes a line item or the whole file becomes one table page. Then parse the file from `inbox/` into a normalized table page under `kb/sources/` with the mapping recorded in frontmatter. Crucially, never infer what a transaction or value means — record only what is observable and ask me before drawing any conclusion. Flag any apparent account numbers, IBANs or secrets for me to review rather than storing them silently. Verify on one file: show the parsed table and the column mapping.</code></pre></div>
+      <div class="prompt"><button class="copy" onclick="amanuCopy(this)">Copy prompt</button><pre><code>Create an `import-csv` skill, wired to my SCHEMA.md, that turns spreadsheets and CSV/financial exports into structured sources. First ask me: which category these belong to; the delimiter and encoding if non-standard; which columns map to which fields (show me the detected header row and let me confirm the mapping); and whether each row becomes a line item or the whole file becomes one table page. Then parse the file from `inbox/` into a normalized table page under `kb/sources/` with the mapping recorded in frontmatter, **keyed by the source filename so re-importing the same file updates rather than duplicates**. Crucially, never infer what a transaction or value means — record only what is observable and ask me before drawing any conclusion. Flag any apparent account numbers, IBANs or secrets for me to review rather than storing them silently. Verify on one file: show the parsed table and the column mapping.</code></pre></div>
       <p class="trust">Trust — local; flag any secrets/account numbers for the user.</p></div>
     </details>
     <details class="ext"><summary><span class="caret">▸</span><span class="nm">messaging-export</span><span class="adds">Exported chat threads become sources.</span><span class="pill in">inbound</span><span class="tier">Connected</span></summary>
       <div class="body"><p class="meta"><b>Invoke:</b> `/import-chat` &nbsp;·&nbsp; <b>Needs:</b> the platform's export + a parser &nbsp;·&nbsp; <b>Secrets:</b> none.</p>
-      <div class="prompt"><button class="copy" onclick="amanuCopy(this)">Copy prompt</button><pre><code>Create an `import-chat` skill, wired to my SCHEMA.md, that turns an exported chat archive (Signal, Telegram, WhatsApp, …) into sources. First ask me: which platform and export format it is; whether to import the whole thread as one page, or split by day or by conversation; and any redaction rules (names, numbers, anything to drop). Then parse the archive from `inbox/` into dated `kb/sources/` page(s) with participants and date-range in frontmatter, applying the redactions before anything is written to disk. Treat the content as sensitive and keep it fully local. Verify on one export: show the parsed page and confirm the redactions held.</code></pre></div>
+      <div class="prompt"><button class="copy" onclick="amanuCopy(this)">Copy prompt</button><pre><code>Create an `import-chat` skill, wired to my SCHEMA.md, that turns an exported chat archive (Signal, Telegram, WhatsApp, …) into sources. First ask me: which platform and export format it is; whether to import the whole thread as one page, or split by day or by conversation; and any redaction rules (names, numbers, anything to drop). Then parse the archive from `inbox/` into dated `kb/sources/` page(s) with participants and date-range in frontmatter, **keyed by archive name + date range so re-runs update rather than duplicate**, applying the redactions before anything is written to disk. Treat the content as sensitive and keep it fully local. Verify on one export: show the parsed page and confirm the redactions held.</code></pre></div>
       <p class="trust">Trust — local; treat content as sensitive.</p></div>
     </details>
     <details class="ext"><summary><span class="caret">▸</span><span class="nm">pii-guard</span><span class="adds">A safety gate that scans inbound sources for secrets/PII before they're filed.</span><span class="pill loc">local</span><span class="tier">Connected</span></summary>
       <div class="body"><p class="meta"><b>Invoke:</b> `/pii-guard` (runs at ingest) &nbsp;·&nbsp; <b>Needs:</b> a pattern/regex scanner (built-in) &nbsp;·&nbsp; <b>Secrets:</b> none.</p>
       <div class="prompt"><button class="copy" onclick="amanuCopy(this)">Copy prompt</button><pre><code>Create a `pii-guard` step, wired to my SCHEMA.md, that screens files in `inbox/` for sensitive data before `/ingest` files them — reinforcing the credential rules. First ask me: which categories of sensitive data to flag (passwords/recovery phrases, account numbers, IBANs, AHV/SSNs, card numbers, API keys); whether a hit should *block* ingest until I confirm or just *annotate* the resulting source page; and any allow-list of patterns that are safe in this store. Then scan each inbound file's text for those patterns and, on a hit, surface the match (with context, masked) and apply the agreed policy — never auto-deleting the source and never sending anything anywhere. Crucially, if a file contains a true secret (password, recovery phrase, private key), stop and tell me to remove it from the source itself before filing. Fully local. Idempotent — re-scanning a cleared file is cheap and silent. Verify on one file containing a fake account number: show the flag and the policy it applied.</code></pre></div>
-      <p class="trust">Trust — fully local; it only flags, never transmits.</p></div>
+      <p class="trust">Trust — fully local; it only flags, never transmits. It's a **policy gate that runs *during* ingest**, not a feed — pair it with any inbound source.</p></div>
     </details>
     <div class="catgroup">
       <p class="gh">Outbound — get value out</p>

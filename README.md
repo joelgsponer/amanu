@@ -58,8 +58,9 @@ guide you if it's missing. Everything else is plain files on your machine.
 | `extensions.md` | The extension catalog (**source of truth**) — 32 plug-ins across 5 categories, each with a complete, preference-asking build prompt, trust class, and tier. |
 | `knowledge-base-architecture.html` | Human-first guide — how it works, plus the full extension catalogue with copy-paste build prompts. |
 | `index.html` | Redirect so GitHub Pages opens the overview. |
-| `templates/` | What the build copies into a new KB (with `{{PLACEHOLDERS}}`): `AGENTS.md` + `CLAUDE.md` entrypoints, `SCHEMA.md` constitution, `schedulers/` (launchd/systemd/cron), and `design/` (a Swiss design system for all HTML output). |
+| `templates/` | What the build copies into a new KB (with `{{PLACEHOLDERS}}`): `AGENTS.md` + `CLAUDE.md` entrypoints, `SCHEMA.md` constitution, `schedulers/` (launchd/systemd/cron), and `design/` (a Basel-School design system for all HTML output). |
 | `tools/gen-catalogue.py` | Regenerates the website's catalogue from `extensions.md` (keeps the two in sync). |
+| `tools/check-design-sync.py` | Guards that `templates/design/report.html`'s inline tokens still match `templates/design/tokens.css`. |
 
 ### Maintaining the catalogue
 
@@ -69,6 +70,7 @@ the generator to update the website's copy-paste cards:
 ```sh
 python3 tools/gen-catalogue.py          # rewrite the HTML catalogue block
 python3 tools/gen-catalogue.py --check  # CI-style: non-zero if out of sync
+python3 tools/check-design-sync.py      # CI-style: fails if report.html drifts from tokens.css
 ```
 
 The HTML between the `CATALOGUE:START/END` markers is generated — don't hand-edit

@@ -162,10 +162,11 @@ and **started** when built (P8), and recorded in `tools/index.md` and the manife
 with their start/stop/status commands. At session start, check and surface any
 service that *should* be running but isn't — never assume a created script is live.
 Two things make this reliable rather than hopeful: (1) every scheduled job writes
-a **heartbeat** (`last_run`/`last_ok` timestamp, e.g. to `tools/<name>.state`), so
-a job that silently died still shows up as *stale* even between sessions; (2) the
-core **`/healthcheck`** skill (below) audits all of this on demand and renders an
-HTML report.
+a **heartbeat** (`last_ok` timestamp, e.g. to `tools/<name>.state`) and records its
+**`interval`** in the manifest, so staleness is *computable* — a job is **stale
+when `last_ok` is older than 1.5× its `interval`** — and a job that silently died
+shows up as stale even between sessions; (2) the core **`/healthcheck`** skill
+(below) applies that rule on demand and renders an HTML report.
 
 **Index & log formats** (initialize these in P2 so they're never ad-hoc):
 - **`memory/index.md`** / **`tools/index.md`** — a header line then one
@@ -174,6 +175,9 @@ HTML report.
 - **`kb/log.md`** — operations, one line each:
   `[YYYY-MM-DD HH:MM] <verb> <object> · <result>` (e.g.
   `[2026-01-15 14:32] ingest 2025-Q1.pdf · kb/sources/2025-Q1`).
+- **`daily/`** — one file per day, `daily/YYYY-MM-DD.md`; one freeform observation
+  per line (what was ingested/queried/learned, gotchas, repeated work). This is the
+  raw feed `/compile` scans, dedupes, and distils into `memory/` + `tools/`.
 
 - **Frontmatter on every page** (`type`, `category`, `date`, `related`, `tags`)
   + `[[wiki-links]]`.
@@ -195,9 +199,10 @@ HTML report.
   extensions: [ ]          # names from extensions.md
   credentials: [ ]         # env-var NAMES only, never values
   tools:                   # the self-arming toolbox + run-state
-    - { name: watch-inbox, kind: service, autostart: true,
+    - { name: watch-inbox, kind: service, autostart: true, interval: "1h",
         start: "<cmd>", stop: "<cmd>", status: "<cmd>", state: running,
-        last_ok: "<timestamp>" }   # heartbeat — stale ⇒ flagged by /healthcheck
+        last_ok: "<timestamp>" }   # stale when last_ok older than 1.5× interval ⇒ /healthcheck flags it
+  design: basel-default    # basel-default | custom — visual-output styling choice
   privacy: local-first
   ```
 - **`README.md`** — a plain-language overview generated near the end.
@@ -364,7 +369,7 @@ Each phase runs the six beats. Adapt wording; hit every beat; honour *Done when*
   first** (known conventions, gotchas, or a tool that already handles this kind of
   source) → read & classify → surface anything notable → rename+move into
   `raw/<category>/` → write the `kb/sources/` page → roll up into entity/topic
-  pages → append `kb/log.md`, and a brief observation to today's `daily/` log →
+  pages → append `kb/log.md`, and a brief observation to today's `daily/YYYY-MM-DD.md` →
   update `kb/index.md`. Confirm at each write.
 - **VERIFY** — open the source page and the updated index together.
 - **CHECKPOINT** — "that's one full ingest — clear how it flowed?"
@@ -377,8 +382,8 @@ Each phase runs the six beats. Adapt wording; hit every beat; honour *Done when*
 - **TAILOR** — ask a real question the new source can answer.
 - **BUILD** — answer by reading `kb/index.md` then the relevant pages; cite them;
   offer to save to `kb/queries/`; append a one-line observation to today's
-  `daily/` log (what was asked, which pages answered it, any gap noticed) — this
-  is what feeds `/compile`.
+  `daily/YYYY-MM-DD.md` (what was asked, which pages answered it, any gap noticed) —
+  this is what feeds `/compile`.
 - **VERIFY** — confirm the answer is grounded in cited pages.
 - **CHECKPOINT** — "retrieval works end to end — see how it used the wiki?"
 - **LOG** — `P6 · first query`.
@@ -396,7 +401,7 @@ Each phase runs the six beats. Adapt wording; hit every beat; honour *Done when*
   `compile-memory` build prompt; for `/healthcheck`, build the system audit that
   renders a self-contained (inline-CSS, no external assets) HTML report to
   `reports/healthcheck-YYYY-MM-DD.html`, **styled from `templates/design/`** (the
-  Swiss design template — or the user's `design/` tokens if `design-system` is added). Then **refresh `AGENTS.md`/`CLAUDE.md`**
+  Basel design template — or the user's `design/` tokens if `design-system` is added). Then **refresh `AGENTS.md`/`CLAUDE.md`**
   so they list the new commands (as a `- /name — one-line` list).
 - **VERIFY** — smoke-test `/ingest` and `/query`; then **close the loop once**:
   run `/compile` over the P5/P6 `daily/` entries and confirm it produced at least
@@ -416,9 +421,11 @@ Each phase runs the six beats. Adapt wording; hit every beat; honour *Done when*
 - **BUILD** — scaffold each from its **`extensions.md` build prompt**, wired to
   `SCHEMA.md`; load any secrets from `.env`. For any **background tool** (watcher,
   scheduler), don't stop at creating the script: **register it to autostart by
-  filling a `templates/schedulers/` template** (launchd plist / systemd
-  service+timer / crontab per the preflight OS — with a log path and, for launchd,
-  `RunAtLoad`), **start it**, have it **write a heartbeat** on each run, and
+  filling the matching `templates/schedulers/` template** (a *watcher* —
+  `launchd-watcher.plist` / `Type=simple` unit — for a long-running process, or a
+  *timer* — `launchd-timer.plist` / `systemd.service`+`.timer` / `crontab.txt` — for
+  a periodic job; per the preflight OS, with a log path), **start it**, have its
+  script **write a heartbeat + record its `interval` in the manifest** each run, and
   **record it in `tools/index.md` and the manifest** with its start/stop/status
   commands. (Re-)register idempotently — unregister-then-register — so a re-run
   never double-loads. Raise `tier` as extensions come online, and **refresh
@@ -446,20 +453,21 @@ Each phase runs the six beats. Adapt wording; hit every beat; honour *Done when*
   system explains itself to your future self.
 - **TAILOR** — confirm lint scope and that a `README` is wanted.
 - **BUILD** — run `/lint` (contradictions, orphans, staleness, missing links,
-  gaps) → dated report in `kb/queries/`. Run `/healthcheck` → HTML report in
-  `reports/`, confirming the system is green (manifest matches reality, services
-  running + persistent, secrets fenced). Fill **`kb/overview.md`** with a short
-  in-folder scope/dashboard (what this KB covers, its categories and key
-  entities). Generate `README.md` (what it is, how to use the skills, decisions —
-  summarised from `CHANGELOG.log`). Confirm `CLAUDE.md`/`AGENTS.md` reflect the
-  final skill + extension set.
+  gaps) → dated report in `kb/queries/`. Run `/healthcheck` as a **progress check**
+  (not a gate): review the report together and **log any amber/red items** to fix
+  now or carry as known gaps — P10 is where green is required. Fill
+  **`kb/overview.md`** with a short in-folder scope/dashboard (what this KB covers,
+  its categories and key entities). Generate `README.md` (what it is, how to use the
+  skills, decisions — summarised from `CHANGELOG.log`). Confirm `CLAUDE.md`/`AGENTS.md`
+  reflect the final skill + extension set.
 - **VERIFY** — review the lint report, the health-check report, and the README
   together.
 - **CHECKPOINT** — "the system documents and checks itself now — does it read
-  right and report green?"
+  right, and are the health-check's flagged items understood?"
 - **LOG** — `P9 · lint + healthcheck + README`.
-- **Done when:** a lint report and a green `/healthcheck` report exist,
-  `kb/overview.md` is filled, and `README.md` describes the live system.
+- **Done when:** a lint report and a `/healthcheck` report exist (its flagged items
+  reviewed and either fixed or logged), `kb/overview.md` is filled, and `README.md`
+  describes the live system. *(Green is the P10 gate, not here.)*
 
 ### P10 · Handoff
 - **TEACH** — recap the whole system in plain words: the two memories (the

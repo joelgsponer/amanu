@@ -20,7 +20,7 @@
     --font-mono:"SF Mono","JetBrains Mono",Menlo,ui-monospace,monospace;
     --ink:#0a0a0a;--ink-soft:#565656;--paper:#f6f5f1;--panel:#fff;--line:#d7d5cd;
     --accent:#e2231a;--ok:#1f7a3d;--ok-bg:#eaf2ec;--warn:#8a6400;--warn-bg:#f4eedd;
-    --fail:#e2231a;--fail-bg:#fae7e5;--track:0.16em;
+    --fail:#e2231a;--fail-bg:#fae7e5;--track-caps:0.16em;
   }
   @media (prefers-color-scheme:dark){:root{
     --ink:#f2f0ea;--ink-soft:#a6a39b;--paper:#0c0c0b;--panel:#161513;--line:#2c2b27;
@@ -31,7 +31,7 @@
   .wrap{max-width:860px;margin:0 auto;padding:64px 24px 96px}
   /* PLANE — a solid black band tops the page (mass). */
   header{border-top:4px solid var(--ink);padding-top:24px;margin-bottom:64px}
-  .kicker{font-size:.78rem;letter-spacing:var(--track);text-transform:uppercase;
+  .kicker{font-size:.78rem;letter-spacing:var(--track-caps);text-transform:uppercase;
           font-weight:700;color:var(--ink-soft);margin:0 0 24px}
   /* CONTRAST — light, large display against bold tracked labels below. */
   h1{font-size:3.157rem;line-height:1.05;font-weight:300;letter-spacing:-.01em;margin:0}

@@ -32,6 +32,29 @@ frontmatter, `[[wiki-links]]`, and the `kb/log.md` operations log. It never
 invents its own storage shape. That is what keeps the ecosystem composable: any
 extension's output is another's input.
 
+### Every prompt is a rebuildable spec
+
+A build prompt is **not a tutorial** — it is a spec precise enough that an agent
+following it twice produces the **same artifact**. Every prompt here (and every one
+you write) states, explicitly:
+
+1. the exact **artifact(s) and file path(s)** it creates (the skill/script/hook and
+   where it lives);
+2. the **inputs it reads / outputs it writes**, through the SCHEMA conventions;
+3. its **idempotency key** — how a re-run updates instead of duplicating (key a
+   source by filename, an event by id, a digest by date, …);
+4. every **threshold or choice** resolved as an explicit **default** *or* an
+   **interview question** — never left implicit;
+5. its **trust-boundary** behaviour (what it may send, what it must not);
+6. a concrete **verify / acceptance** step that proves it worked.
+
+### Google: use `gog`, not the Google MCP
+
+For all Google Workspace work (Gmail, Calendar, Drive) the build uses the **`gog`**
+CLI (its own OAuth login) — **never** the Google MCP servers, **even when an MCP is
+available** in the environment. `gog` is local, key-free, and keeps the built system
+portable and runnable headlessly (where these extensions actually run).
+
 Each extension declares four things:
 
 | Field | Meaning |
@@ -49,7 +72,7 @@ entry's trust note.)
 
 The catalog maps onto a growth path, so you adopt capability in stages:
 
-1. **Starter** — the core only: ingest, query, lint. No network.
+1. **Starter** — the core only: ingest, query, lint, compile, healthcheck. No network; the self-arming loop runs on demand.
 2. **Connected** — inbound feeds + outbound consumption (email, drive, research…).
 3. **Automated** — it maintains itself (hooks, compile loop, cron, backup).
 4. **Intelligent** — it reasons over itself (sub-agents, reconciliation, search).
@@ -80,7 +103,7 @@ are never fused into one step.
 - **Trust note:** never sends, replies, or forwards.
 
 ```text
-Create an `ingest-email` skill, wired to my SCHEMA.md, that turns a Gmail label into an automatic source feed. First ask me: which label marks messages to ingest (suggest `ingest-pending`); whether to file the message body as its own source page or only the attachments; and what to do with a message once handled — relabel it (suggest `ingest-done`), archive it, or leave it. Then, for each matching message oldest-first, write the body to `kb/sources/` with sender, subject and date in frontmatter, download every attachment into `inbox/`, run `/ingest` over the new files, and apply the agreed post-step. Use `gog` (its own OAuth login — no API key). Keep it pull-only (never reply, forward, or send), idempotent (record processed message IDs and skip anything already handled), and resilient (on any failure leave the message's label untouched so the next run retries it). Before processing the batch, show me the first message it would file and confirm; verify by running once and opening the resulting source page together.
+Create an `ingest-email` skill, wired to my SCHEMA.md, that turns a Gmail label into an automatic source feed. First ask me: which label marks messages to ingest (suggest `ingest-pending`); whether to file the message body as its own source page or only the attachments; and what to do with a message once handled — relabel it (suggest `ingest-done`), archive it, or leave it. Then, for each matching message oldest-first, write the body to `kb/sources/` with sender, subject and date in frontmatter, download every attachment into `inbox/`, run `/ingest` over the new files, and apply the agreed post-step. Use `gog` (its own OAuth login — no API key), **not the Google MCP**, even if an MCP is available. Keep it pull-only (never reply, forward, or send), idempotent (record processed message IDs and skip anything already handled), and resilient (on any failure leave the message's label untouched so the next run retries it). Before processing the batch, show me the first message it would file and confirm; verify by running once and opening the resulting source page together.
 ```
 
 ### drive-sync · inbound · Connected
@@ -140,7 +163,7 @@ Create a `pull-calendar` skill, wired to my SCHEMA.md, that brings calendar even
 - **Trust note:** local; flag any secrets/account numbers for the user.
 
 ```text
-Create an `import-csv` skill, wired to my SCHEMA.md, that turns spreadsheets and CSV/financial exports into structured sources. First ask me: which category these belong to; the delimiter and encoding if non-standard; which columns map to which fields (show me the detected header row and let me confirm the mapping); and whether each row becomes a line item or the whole file becomes one table page. Then parse the file from `inbox/` into a normalized table page under `kb/sources/` with the mapping recorded in frontmatter. Crucially, never infer what a transaction or value means — record only what is observable and ask me before drawing any conclusion. Flag any apparent account numbers, IBANs or secrets for me to review rather than storing them silently. Verify on one file: show the parsed table and the column mapping.
+Create an `import-csv` skill, wired to my SCHEMA.md, that turns spreadsheets and CSV/financial exports into structured sources. First ask me: which category these belong to; the delimiter and encoding if non-standard; which columns map to which fields (show me the detected header row and let me confirm the mapping); and whether each row becomes a line item or the whole file becomes one table page. Then parse the file from `inbox/` into a normalized table page under `kb/sources/` with the mapping recorded in frontmatter, **keyed by the source filename so re-importing the same file updates rather than duplicates**. Crucially, never infer what a transaction or value means — record only what is observable and ask me before drawing any conclusion. Flag any apparent account numbers, IBANs or secrets for me to review rather than storing them silently. Verify on one file: show the parsed table and the column mapping.
 ```
 
 ### messaging-export · inbound · Connected
@@ -150,14 +173,14 @@ Create an `import-csv` skill, wired to my SCHEMA.md, that turns spreadsheets and
 - **Trust note:** local; treat content as sensitive.
 
 ```text
-Create an `import-chat` skill, wired to my SCHEMA.md, that turns an exported chat archive (Signal, Telegram, WhatsApp, …) into sources. First ask me: which platform and export format it is; whether to import the whole thread as one page, or split by day or by conversation; and any redaction rules (names, numbers, anything to drop). Then parse the archive from `inbox/` into dated `kb/sources/` page(s) with participants and date-range in frontmatter, applying the redactions before anything is written to disk. Treat the content as sensitive and keep it fully local. Verify on one export: show the parsed page and confirm the redactions held.
+Create an `import-chat` skill, wired to my SCHEMA.md, that turns an exported chat archive (Signal, Telegram, WhatsApp, …) into sources. First ask me: which platform and export format it is; whether to import the whole thread as one page, or split by day or by conversation; and any redaction rules (names, numbers, anything to drop). Then parse the archive from `inbox/` into dated `kb/sources/` page(s) with participants and date-range in frontmatter, **keyed by archive name + date range so re-runs update rather than duplicate**, applying the redactions before anything is written to disk. Treat the content as sensitive and keep it fully local. Verify on one export: show the parsed page and confirm the redactions held.
 ```
 
 ### pii-guard · local · Connected
 - **Adds:** A safety gate that scans inbound sources for secrets/PII before they're filed.
 - **Skill:** `/pii-guard` (runs at ingest)
 - **Needs:** a pattern/regex scanner (built-in) · **Secrets:** none.
-- **Trust note:** fully local; it only flags, never transmits.
+- **Trust note:** fully local; it only flags, never transmits. It's a **policy gate that runs *during* ingest**, not a feed — pair it with any inbound source.
 
 ```text
 Create a `pii-guard` step, wired to my SCHEMA.md, that screens files in `inbox/` for sensitive data before `/ingest` files them — reinforcing the credential rules. First ask me: which categories of sensitive data to flag (passwords/recovery phrases, account numbers, IBANs, AHV/SSNs, card numbers, API keys); whether a hit should *block* ingest until I confirm or just *annotate* the resulting source page; and any allow-list of patterns that are safe in this store. Then scan each inbound file's text for those patterns and, on a hit, surface the match (with context, masked) and apply the agreed policy — never auto-deleting the source and never sending anything anywhere. Crucially, if a file contains a true secret (password, recovery phrase, private key), stop and tell me to remove it from the source itself before filing. Fully local. Idempotent — re-scanning a cleared file is cheap and silent. Verify on one file containing a fake account number: show the flag and the policy it applied.
@@ -332,6 +355,7 @@ Create a `backup` job, wired to my SCHEMA.md, that backs the store up off-machin
 - **Adds:** The recovery counterpart to `encrypted-backup` — rebuilds the store from ciphertext.
 - **Skill:** `/restore`
 - **Needs:** `age`/`gpg` + access to the backup remote · **Secrets:** `BACKUP_KEY` (in `.env`, never committed).
+- **Depends on:** `encrypted-backup` must be set up first (and use the **same `BACKUP_KEY`**) — there's nothing to restore otherwise.
 - **Trust note:** inbound; pulls only your own ciphertext, decrypts locally, sends nothing.
 
 ```text
@@ -427,8 +451,10 @@ The ecosystem is open — a new extension just follows the contract:
    invent new storage.
 3. **Declare Needs + Secrets.** List tools, and any env var *names* (values live
    in the git-ignored `.env`, mirrored by name into `.env.example`).
-4. **Write the build prompt.** A complete paragraph telling an agent exactly what
-   to scaffold *and* which preferences to ask the user for first, including
-   idempotency and the trust-boundary rule.
+4. **Write the build prompt as a rebuildable spec.** A complete paragraph telling
+   an agent exactly what to scaffold *and* which preferences to ask first. It must
+   hit all six points above (artifact path · inputs/outputs · idempotency key ·
+   every threshold as a default or a question · trust boundary · a verify step) so
+   two runs converge on the same artifact. For Google work, specify `gog`.
 5. **Add an entry here** under the right category and tier, using the template
    above, then run `tools/gen-catalogue.py` to sync the website.

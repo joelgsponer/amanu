@@ -30,10 +30,11 @@ Supporting: `inbox/` (drop zone for new sources) · `tools/` (self-arming toolbo
 **Convention — visual outputs default to the design system, but the user's wishes
 win.** Any generated visual output (the `/healthcheck` report, exported reports,
 static sites, charts) uses the `design/` tokens **as the default** — applied only
-when the user hasn't asked for something different. If the user requests another
-style (for a specific output or in general), honour that instead; never impose the
-predefined design over an explicit preference. The shipped `templates/design/`
-(Basel defaults) is the fallback when no `design/` exists yet.
+when the user hasn't asked for something different. The manifest records the choice
+as **`design: basel-default | custom`** (default `basel-default`); when it's
+`custom`, honour the user's own style instead and never impose the predefined
+design. The shipped `templates/design/` (Basel defaults) is the fallback when no
+`design/` exists yet.
 
 ## File naming
 
@@ -78,25 +79,40 @@ Scan `kb/` for contradictions, orphan pages, stale claims, missing `[[links]]`, 
 data gaps. Write a dated report to `kb/queries/`. Proposes, never auto-edits.
 
 ### `/compile` — the self-arming loop *(on demand)*
-Read the `daily/` logs and (1) extract durable lessons/gotchas/preferences, dedupe
-against existing `memory/` facts, write new typed+linked fact files, update
-`memory/index.md`; (2) detect recurrent tasks/automations and propose or generate a
-`tools/` script (catalogued with start/stop/status). Idempotent: skip
-already-compiled days. (The Automated tier schedules this; here you run it.)
+Read the `daily/YYYY-MM-DD.md` logs since the last compile and:
+(1) extract durable lessons/gotchas/preferences; **dedupe by fact title/slug**
+(case-insensitive — a new fact whose slug already names a `memory/` file updates it,
+never duplicates); write each as a typed+linked fact file `memory/<slug>.md` and
+update `memory/index.md`;
+(2) detect recurrent tasks/automations — a task that recurs **≥ the threshold**
+(default 3; configurable) becomes a candidate `tools/` script, catalogued in
+`tools/index.md` with start/stop/status. New facts/tools are **proposed for
+approval** by default, or written directly if the user pre-approved auto-write.
+**Idempotency key:** record the last compiled date in `memory/index.md` and skip
+day-files already processed. (The Automated tier schedules this; here you run it.)
+Verify by compiling one day and confirming ≥1 fact/tool, with no duplicate of an
+existing fact.
 
 ### `/healthcheck` — audit the running system → HTML report
-Verify *the machinery* (where `/lint` checks content): manifest vs. reality (every
-skill/extension/tool exists); each background service's `status` + boot-persistence
-+ heartbeat freshness; secret hygiene (`.env` ignored & untracked, no secrets in
-tracked files); KB integrity (frontmatter, no broken links, no orphans, index
-coverage); self-arming-loop freshness (`daily/` written, `/compile` run recently).
-Write a single self-contained HTML file (**inline CSS, no external/CDN assets**) to
-`reports/healthcheck-YYYY-MM-DD.html` with a status banner and a per-section
-pass/warn/fail table + remediation hints. **Style it with the design system** —
-`design/tokens.css` if the `design-system` extension is installed, else the shipped
-`templates/design/report.html` Basel default — unless the user asked for a
-different style. Reports, never auto-fixes. Idempotent:
-overwrite the same-day report.
+Verify *the machinery* (where `/lint` checks content). Emit **one section per check
+area**, each row `pass | warn | fail` with a remediation hint:
+1. **manifest vs. reality** — every skill/extension/tool in `amanu.yaml` exists on disk;
+2. **services** — each background tool's `status` + boot-persistence + **heartbeat**
+   (`tools/<name>.state` `last_ok` newer than 1.5× its manifest `interval`);
+3. **secret hygiene** — `.env` git-ignored & untracked; no secret-shaped strings in
+   tracked files; `credentials:` are names only;
+4. **KB integrity** — frontmatter present, no broken `[[links]]`, no orphans, `kb/index.md` covers disk;
+5. **loop freshness** — `daily/` written recently and `/compile` run since;
+6. **git** — repo initialized; uncommitted/untracked summary.
+**Output:** one self-contained HTML file (**inline CSS, no external/CDN assets**) at
+`reports/healthcheck-YYYY-MM-DD.html` — a status banner + the per-section table.
+**Style:** read the design tokens (`design/tokens.css` if the `design-system`
+extension is installed, else the shipped `templates/design/tokens.css` Basel
+default) and **embed their CSS-variable values inline** — never link an external
+asset. Honour `design: custom` in the manifest (the user chose another style).
+Reports, never auto-fixes. **Idempotency key:** overwrite the same-day report.
+Verify by running once and opening the report; a deliberately-stopped service shows
+`fail`.
 
 ## Privacy & credentials
 

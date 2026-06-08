@@ -1,6 +1,9 @@
 # amanu cron template — append idempotently (see schedulers/README.md).
 # The trailing "# amanu:{{LABEL}}" marker is how re-installs find & replace this
-# line without duplicating it. Use ABSOLUTE paths — cron's PATH is minimal.
+# line without duplicating it.
+# !! ABSOLUTE PATHS ONLY !! cron runs with a minimal PATH (typically /usr/bin:/bin),
+#    so {{CMD}} must be a full path (e.g. /usr/local/bin/python3, NOT "python3") or
+#    the job fails silently — the #1 "worked in the session, dead on schedule" bug.
 # {{CRON}} is a 5-field schedule, e.g. "0 2 * * *" (daily 02:00).
-# The script must refresh its heartbeat ({{STATE}}) on each successful run.
+# The invoked {{CMD}} script must refresh its heartbeat ({{STATE}}) on each run.
 {{CRON}} cd {{WORKDIR}} && {{CMD}} {{ARGS}} >> {{LOG}} 2>&1  # amanu:{{LABEL}}

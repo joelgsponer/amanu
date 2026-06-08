@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- amanu launchd template → ~/Library/LaunchAgents/{{LABEL}}.plist
-     Replace {{...}} with absolute values. RunAtLoad makes it boot-persistent.
-     The script must refresh its heartbeat ({{STATE}}) on each successful run. -->
+<!-- amanu launchd WATCHER template → ~/Library/LaunchAgents/{{LABEL}}.plist
+     For a LONG-RUNNING process that must stay up (e.g. watch-inbox / fswatch).
+     KeepAlive restarts it if it dies; RunAtLoad makes it boot-persistent.
+     For a PERIODIC job (scheduled-maintenance, compile-memory, backup) use
+     launchd-timer.plist instead — KeepAlive on a one-shot job spins forever.
+     The invoked {{CMD}} must refresh its heartbeat ({{STATE}}) on each run. -->
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
@@ -13,7 +16,7 @@
     </array>
     <key>WorkingDirectory</key> <string>{{WORKDIR}}</string>
     <key>RunAtLoad</key>        <true/>
-    <key>KeepAlive</key>        <true/>          <!-- watchers: keep alive; for a timer-style job use StartInterval/StartCalendarInterval and remove KeepAlive -->
+    <key>KeepAlive</key>        <true/>
     <key>StandardOutPath</key>  <string>{{LOG}}</string>
     <key>StandardErrorPath</key><string>{{LOG}}</string>
 </dict>
